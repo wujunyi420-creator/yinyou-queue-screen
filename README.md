@@ -6,7 +6,7 @@
 
 专为舞萌 maimai / 中二节奏 CHUNITHM 街机店打造的全功能排队管理系统
 
-🌐 **在线体验**：[音游窝社区论坛](https://yinyou-forum.wujunyi420.workers.dev/)
+🌐 **在线体验**：[音游窝社区论坛](https://yinyou-forum.wujunyi420.workers.dev/)（需挂梯子访问，部署在国外）
 
 [![License](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-FF5C7A?style=flat-square)](LICENSE)
 [![Node](https://img.shields.io/badge/Node.js-%3E%3D14-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org/)
