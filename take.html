@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>扫码取号</title>
+<style>
+:root{--bg-deep:#0F0E1E;--bg-panel:#1B1938;--accent-maimai:#33E6C9;--accent-chunithm:#FFB238;--text-primary:#F4F2FF;--text-muted:#9490B8;--text-dim:#635F8A;--border:#322F5C;--ok:#33E6C9;--danger:#FF5C7A;--vip:#FFD86B;--font-main:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-main);min-height:100vh;font-size:15px}
+body{background-image:radial-gradient(circle at 12% -10%,rgba(51,230,201,0.12),transparent 45%),radial-gradient(circle at 88% 110%,rgba(255,178,56,0.12),transparent 45%);display:flex;flex-direction:column;align-items:center;padding:20px}
+.wrap{width:100%;max-width:420px;display:flex;flex-direction:column;gap:18px;flex:1}
+header{text-align:center;padding:14px 0 6px}
+header .shop{font-size:22px;font-weight:800;background:linear-gradient(90deg,var(--accent-maimai),var(--accent-chunithm));-webkit-background-clip:text;background-clip:text;color:transparent}
+header .tag{font-size:13px;color:var(--text-muted);margin-top:6px}
+.card{background:var(--bg-panel);border:1px solid var(--border);border-radius:16px;padding:22px 20px}
+.section-title{font-size:15px;font-weight:700;margin:0 0 16px;text-align:center}
+.machine-pick{display:grid;gap:12px;margin-bottom:18px}
+.machine-pick.cols-1{grid-template-columns:1fr}
+.machine-pick.cols-2{grid-template-columns:1fr 1fr}
+.machine-pick.cols-multi{grid-template-columns:1fr 1fr}
+.machine-pick button{background:var(--bg-deep);border:2px solid var(--border);color:var(--text-primary);border-radius:14px;padding:18px 10px;font-size:16px;font-weight:700;font-family:inherit;cursor:pointer;transition:all 0.15s ease;display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;overflow:hidden}
+.machine-pick button .ico{font-size:24px}
+.machine-pick button .ml{font-size:14px}
+.machine-pick button.sel{border-color:var(--accent-maimai);background:rgba(51,230,201,0.12);color:var(--accent-maimai)}
+.machine-pick button.repair{opacity:0.5}
+.machine-pick button.repair .repair-flag{position:absolute;top:4px;right:4px;font-size:10px;background:#ff5a5a;color:#fff;border-radius:6px;padding:2px 6px;font-weight:700}
+.machine-pick button .repair-flag{display:none}
+.machine-pick button.repair .repair-flag{display:block}
+.btn-take{width:100%;padding:15px;border:none;border-radius:12px;font-size:16px;font-weight:800;font-family:inherit;cursor:pointer;color:#06231F;background:linear-gradient(90deg,var(--accent-maimai),var(--accent-chunithm));transition:transform 0.05s ease}
+.btn-take:active{transform:translateY(1px)}
+.btn-take:disabled{opacity:0.4;cursor:not-allowed}
+.flash-ahead{animation:flashAhead 0.8s ease-out}
+@keyframes flashAhead{0%{color:#33E6C9;transform:scale(1.3)}100%{color:inherit;transform:scale(1)}}
+.result{text-align:center;display:none}
+.result.show{display:block}
+.result .num{font-size:64px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1;margin:10px 0;letter-spacing:0.04em}
+.result .num.member{color:var(--vip);text-shadow:0 0 12px rgba(255,216,107,0.5)}
+.result .num.vip-num{color:var(--vip);text-shadow:0 0 20px rgba(255,216,107,0.9),0 0 40px rgba(255,90,122,0.5)}
+.result .name-display{font-size:18px;font-weight:700;color:var(--text-primary);margin-top:6px}
+.result .member-badge{display:inline-block;background:linear-gradient(90deg,#FFD86B,#FFB238);color:#3a2400;font-size:12px;font-weight:800;padding:3px 12px;border-radius:20px;margin-top:8px}
+.result .vip-badge{display:inline-block;background:linear-gradient(90deg,#FF5C7A,#FFD86B);color:#3a0a1a;font-size:13px;font-weight:900;padding:4px 14px;border-radius:20px;margin-top:8px;animation:vipBlink 1s steps(2) infinite}
+@keyframes vipBlink{0%{opacity:1;transform:scale(1)}50%{opacity:0.7;transform:scale(1.05)}100%{opacity:1;transform:scale(1)}}
+.result .lbl{font-size:13px;color:var(--text-muted)}
+.result .meta{margin-top:18px;display:flex;gap:10px;justify-content:center}
+.result .meta .box{background:var(--bg-deep);border:1px solid var(--border);border-radius:12px;padding:12px 16px;min-width:90px}
+.result .meta .box .v{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+.result .meta .box .k{font-size:11px;color:var(--text-dim);margin-top:2px}
+.status-line{font-size:13px;text-align:center;padding:10px;border-radius:10px;margin-top:14px}
+.status-line.wait{background:rgba(51,230,201,0.10);color:var(--accent-maimai)}
+.status-line.called{background:rgba(255,178,56,0.14);color:var(--accent-chunithm);font-weight:700;font-size:15px}
+.tip{font-size:12px;color:var(--text-dim);text-align:center;line-height:1.6;padding:0 8px}
+.retake{margin-top:14px;width:100%;padding:10px;border:1px solid var(--border);background:transparent;color:var(--text-dim);border-radius:10px;font-size:13px;font-family:inherit;cursor:pointer}
+.retake:active{background:var(--bg-deep)}
+footer{margin-top:auto;padding:10px 0;font-size:11px;color:var(--text-dim);text-align:center}
+.saved-badge{display:inline-block;background:rgba(51,230,201,0.15);color:var(--accent-maimai);font-size:11px;padding:3px 10px;border-radius:20px;margin-top:8px;border:1px solid var(--accent-maimai)}
+.phone-field{margin-bottom:14px}
+.phone-field label{display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px}
+.phone-row{display:flex;gap:8px;align-items:center}
+.phone-row input{flex:1;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-primary);border-radius:10px;padding:11px 12px;font-size:15px;font-family:inherit;outline:none}
+.phone-row input:focus{border-color:var(--accent-maimai)}
+.phone-row .member-tag{font-size:11px;background:linear-gradient(90deg,#FFD86B,#FFB238);color:#3a2400;padding:4px 10px;border-radius:20px;font-weight:700;white-space:nowrap}
+.phone-hint{font-size:11px;color:var(--text-dim);margin-top:6px;line-height:1.5}
+.member-info-row{display:none;margin-top:10px;flex-direction:column;gap:8px}
+.member-info-row.show{display:flex}
+.member-info-row .visits-line{font-size:13px;color:var(--vip);font-weight:700;text-align:center}
+.member-info-row .visits-line.vip{font-size:15px;color:var(--vip);text-shadow:0 0 10px rgba(255,216,107,0.6);animation:vipBlink 1.2s ease-in-out infinite}
+.member-name-field{display:flex;flex-direction:column;gap:6px}
+.member-name-field label{font-size:12px;color:var(--text-muted)}
+.member-name-field input{background:var(--bg-deep);border:1px solid var(--border);color:var(--text-primary);border-radius:10px;padding:11px 12px;font-size:15px;font-family:inherit;outline:none}
+.member-name-field input:focus{border-color:var(--accent-maimai)}
+.avatar-row{display:none;margin-top:8px;align-items:center;gap:10px}
+.avatar-row.show{display:flex}
+.avatar-row .av-preview{width:48px;height:48px;border-radius:50%;background:var(--bg-deep);border:2px solid #FFD86B;background-size:cover;background-position:center;flex-shrink:0}
+.avatar-row .av-btn{font-size:12px;background:linear-gradient(90deg,#FFD86B,#FFB238);color:#3a2400;border:none;border-radius:8px;padding:7px 12px;font-weight:700;cursor:pointer;font-family:inherit}
+.avatar-row .av-tip{font-size:11px;color:var(--text-dim);flex:1}
+#call-notify{position:fixed;top:14px;left:14px;z-index:50;background:rgba(27,25,56,0.95);border:2px solid #FFD86B;border-radius:16px;padding:14px 18px;display:none;align-items:center;gap:14px;box-shadow:0 8px 32px rgba(255,216,107,0.35);backdrop-filter:blur(8px);max-width:90vw}
+#call-notify.show{display:flex;animation:callPulse 1.2s ease-out}
+#call-notify.vip{border-color:#FF5C7A;box-shadow:0 8px 32px rgba(255,90,122,0.5),0 0 40px rgba(255,216,107,0.4)}
+#call-notify .cn-avatar{width:60px;height:60px;border-radius:50%;background-size:cover;background-position:center;border:3px solid #FFD86B;flex-shrink:0;background-color:#1B1938}
+#call-notify .cn-avatar.empty{display:flex;align-items:center;justify-content:center;font-size:24px}
+#call-notify .cn-info{display:flex;flex-direction:column;gap:2px}
+#call-notify .cn-title{font-size:11px;color:#FFD86B;font-weight:700;letter-spacing:0.05em}
+#call-notify .cn-num{font-size:28px;font-weight:800;color:#FFD86B;text-shadow:0 0 10px rgba(255,216,107,0.5);font-variant-numeric:tabular-nums;line-height:1.1}
+#call-notify .cn-name{font-size:18px;font-weight:800;color:#FFD86B}
+#call-notify .cn-sub{font-size:12px;color:var(--text-muted)}
+@keyframes callPulse{0%{transform:scale(0.8);opacity:0}50%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
+.forum-entry{display:flex;align-items:center;gap:12px;background:var(--bg-panel);border:1px solid var(--border);border-radius:14px;padding:12px 14px;text-decoration:none;color:var(--text-primary);transition:all 0.15s ease;position:relative;overflow:hidden}
+.forum-entry::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--accent-maimai),var(--accent-chunithm))}
+.forum-entry:active{transform:translateY(1px);border-color:var(--accent-maimai)}
+.forum-entry .fe-icon{font-size:22px;width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,rgba(51,230,201,0.18),rgba(255,178,56,0.18));display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.forum-entry .fe-text{flex:1;min-width:0}
+.forum-entry .fe-title{font-size:14px;font-weight:700;color:var(--text-primary);line-height:1.3}
+.forum-entry .fe-sub{font-size:11px;color:var(--text-muted);margin-top:2px}
+.forum-entry .fe-arrow{font-size:20px;color:var(--text-dim);flex-shrink:0}
+</style>
+</head>
+<body>
+<div id="call-notify"><div class="cn-avatar empty" id="cn-avatar">👤</div><div class="cn-info"><div class="cn-title" id="cn-title">到号了</div><div class="cn-num" id="cn-num">—</div><div class="cn-name" id="cn-name" style="display:none;"></div><div class="cn-sub" id="cn-sub">请前往机台</div></div></div>
+<div class="wrap">
+<header>
+<div class="shop" id="shop-name">你的店名</div>
+<div class="tag" id="shop-tag">扫码取号 · 排队中请留意叫号</div>
+</header>
+<div id="pick-card" class="card">
+<h2 class="section-title">选择机台取号</h2>
+<div class="phone-field">
+<label>会员手机号（可选）</label>
+<div class="phone-row">
+<input type="tel" id="in-phone" placeholder="输入手机号登录会员" maxlength="11" inputmode="numeric">
+<span class="member-tag" id="member-tag" style="display:none;">会员</span>
+</div>
+<div class="phone-hint" id="phone-hint">如果是会员，输入手机号后取号可享金色号码标识。非会员可直接取号。</div>
+<div class="member-info-row" id="member-info-row">
+<div class="visits-line" id="visits-line"></div>
+<div class="member-name-field">
+<label>自定义叫号名称（叫号时会念出名称）</label>
+<input type="text" id="in-member-name" placeholder="如：小明" maxlength="20">
+</div>
+</div>
+<div class="avatar-row" id="avatar-row">
+<div class="av-preview" id="av-preview"></div>
+<label class="av-btn" for="avatar-file-input">上传头像</label>
+<input type="file" id="avatar-file-input" accept="image/png,image/jpeg,image/gif,image/webp" style="display:none">
+<span class="av-tip" id="av-tip">上传自定义头像，叫号时显示</span>
+</div>
+</div>
+<div class="machine-pick cols-2" id="machine-pick"></div>
+<button class="btn-take" id="btn-take">取号</button>
+</div>
+<div id="result-card" class="card result">
+<div class="lbl">您的号码</div>
+<div class="num" id="my-num">—</div>
+<div id="my-name-display" class="name-display" style="display:none;"></div>
+<div id="my-member-badge" class="member-badge" style="display:none;">⭐ 会员尊享</div>
+<div id="my-vip-badge" class="vip-badge" style="display:none;">⭐⭐⭐ VIP 尊享 ⭐⭐⭐</div>
+<div class="meta">
+<div class="box"><div class="v" id="my-ahead">—</div><div class="k">前方人数</div></div>
+<div class="box"><div class="v" id="my-est">—</div><div class="k">预计等待(分)</div></div>
+</div>
+<div class="status-line wait" id="my-status">排队中，请留意大屏叫号</div>
+<div id="saved-info" style="display:none;text-align:center;margin-top:10px"><span class="saved-badge">号码已保存，再次扫码可查看</span></div>
+<button class="retake" id="btn-retake" style="display:none">放弃此号，重新取号</button>
+</div>
+<a href="/forum.html" class="forum-entry" id="forum-entry">
+<div class="fe-icon">💬</div>
+<div class="fe-text">
+<div class="fe-title">等号无聊？进社区聊聊</div>
+<div class="fe-sub" id="fe-sub">约拼机 · 晒成绩 · 求带教学</div>
+</div>
+<div class="fe-arrow">›</div>
+</a>
+<div class="tip" id="tip">取号后号码会保存在本机，再次扫码可查看当前排队状态。</div>
+<footer>排队大屏系统</footer>
+</div>
+<script>
+(function(){"use strict";
+var MACHINE="",myNumber=null,myMachine=null,evtSource=null,myIsMember=false,myAvatar=null,myName="",myVip=false,myVisits=0;
+var STORE_KEY="pq_taken_number_v1";
+function $(id){return document.getElementById(id)}
+function apiPost(p,b){return fetch(p,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(b)}).then(function(r){return r.json()})}
+function findMachine(id,machines){machines=machines||[];for(var i=0;i<machines.length;i++){if(machines[i].id===id)return machines[i]}return null}
+function labelOf(m,machines){var mc=findMachine(m,machines);return mc?mc.label:m}
+function statusOf(m,machines){var mc=findMachine(m,machines);return(mc&&mc.status)||"ok"}
+function escHtml(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function saveNumber(machine,number,phone,isMember,avatar,name,vip,visits){try{localStorage.setItem(STORE_KEY,JSON.stringify({machine:machine,number:number,phone:phone||"",isMember:!!isMember,avatar:avatar||null,name:name||"",vip:!!vip,visits:visits||0,ts:Date.now()}))}catch(e){}}
+function loadNumber(){try{var s=localStorage.getItem(STORE_KEY);if(!s)return null;var d=JSON.parse(s);if(d&&d.machine&&d.number)return d}catch(e){}return null}
+function clearNumber(){try{localStorage.removeItem(STORE_KEY)}catch(e){}}
+// 动态渲染机台按钮
+function renderMachinePick(machines){
+  var box=$("machine-pick");
+  var sel=MACHINE;
+  // 选第一个可用机台作为默认
+  if(!sel||!findMachine(sel,machines)){
+    var ok=null;
+    for(var i=0;i<machines.length;i++){if(statusOf(machines[i].id,machines)!=="repair"){ok=machines[i].id;break}}
+    MACHINE=ok||(machines.length?machines[0].id:"");
+  }
+  // 列数适配
+  var n=machines.length;
+  box.className="machine-pick "+(n<=1?"cols-1":(n===2?"cols-2":"cols-multi"));
+  box.innerHTML="";
+  machines.forEach(function(mc){
+    var btn=document.createElement("button");
+    var isRepair=statusOf(mc.id,machines)==="repair";
+    var isSel=mc.id===MACHINE;
+    btn.setAttribute("data-machine",mc.id);
+    btn.className=(isSel?"sel":"")+(isRepair?" repair":"");
+    btn.innerHTML='<span class="ico">🎮</span><span class="ml">'+escHtml(mc.label)+'</span><span class="repair-flag">维护中</span>';
+    box.appendChild(btn);
+  });
+  box.querySelectorAll("button[data-machine]").forEach(function(b){
+    b.addEventListener("click",function(){
+      var id=b.getAttribute("data-machine");
+      if(statusOf(id,machines)==="repair")return;
+      MACHINE=id;
+      renderMachinePick(machines);
+    });
+  });
+}
+$("btn-take").addEventListener("click",function(){
+  var btn=$("btn-take");btn.disabled=true;btn.textContent="取号中...";
+  var phone=String($("in-phone").value||"").trim();
+  var name=myIsMember?String($("in-member-name").value||"").trim():"";
+  if(!MACHINE){btn.disabled=false;btn.textContent="取号";$("tip").textContent="请先选择机台";return}
+  apiPost("/api/take",{machine:MACHINE,phone:phone,name:name}).then(function(d){
+    if(!d||!d.ok){btn.disabled=false;btn.textContent="取号";$("tip").textContent=(d&&d.error)||"取号失败，请重试";return}
+    myNumber=d.number;myMachine=d.machine;myIsMember=!!d.isMember;myAvatar=d.avatar||null;myName=d.name||"";myVip=!!d.vip;myVisits=d.visits||0;
+    saveNumber(d.machine,d.number,phone,!!d.isMember,d.avatar,myName,myVip,myVisits);
+    showResult(d.machine,d.number,d.ahead,d.estMin,!!d.isMember,myName,myVip);
+    requestNotifyPermission();
+    connectSSE();
+  }).catch(function(e){btn.disabled=false;btn.textContent="取号";$("tip").textContent="网络错误："+e.message});
+});
+// 手机号实时检测会员
+var phoneCheckTimer=null;
+$("in-phone").addEventListener("input",function(e){
+  var phone=String(e.target.value||"").trim();
+  clearTimeout(phoneCheckTimer);
+  var tag=$("member-tag"),hint=$("phone-hint"),info=$("member-info-row");
+  if(!phone||phone.length<11){
+    tag.style.display="none";
+    hint.textContent="如果是会员，输入手机号后取号可享金色号码标识。非会员可直接取号。";
+    hint.style.color="var(--text-dim)";
+    info.classList.remove("show");
+    $("avatar-row").classList.remove("show");
+    myAvatar=null;myIsMember=false;
+    return;
+  }
+  phoneCheckTimer=setTimeout(function(){
+    apiPost("/api/check-member",{phone:phone}).then(function(d){
+      if(d&&d.isMember){
+        tag.style.display="inline-block";
+        hint.textContent="✓ 会员已识别，取号后号码将显示金色";
+        hint.style.color="#FFD86B";
+        myAvatar=d.avatar||null;
+        myIsMember=true;
+        myVip=!!d.vip;
+        myVisits=d.visits||0;
+        myName=d.name||"";
+        // 显示次数与名称输入
+        info.classList.add("show");
+        var vl=$("visits-line");
+        if(myVip){vl.className="visits-line vip";vl.textContent="⭐⭐⭐ VIP 尊享 · 累计 "+myVisits+" 次 ⭐⭐⭐"}
+        else{vl.className="visits-line";vl.textContent="您是第 "+myVisits+" 次光临"}
+        $("in-member-name").value=myName;
+        // 头像
+        $("avatar-row").classList.add("show");
+        if(myAvatar){$("av-preview").style.backgroundImage="url('"+myAvatar+"')";$("av-tip").textContent="头像已设置，叫号时显示"}
+        else{$("av-preview").style.backgroundImage="none";$("av-tip").textContent="上传自定义头像，叫号时显示"}
+      }
+      else{
+        tag.style.display="none";
+        hint.textContent="非会员用户，号码为普通白色。会员请联系前台办理。";
+        hint.style.color="var(--text-dim)";
+        info.classList.remove("show");
+        $("avatar-row").classList.remove("show");
+        myAvatar=null;myIsMember=false;
+      }
+    }).catch(function(){});
+  },300);
+});
+// 显示结果页
+function showResult(machine,number,ahead,estMin,isMember,name,vip){
+  $("pick-card").style.display="none";
+  $("result-card").classList.add("show");
+  $("my-num").textContent=number;
+  $("my-num").className="num "+(vip?"vip-num":(isMember?"member":""));
+  // 显示会员名称
+  if(isMember&&name){
+    $("my-name-display").style.display="block";
+    $("my-name-display").textContent=name;
+  }else{
+    $("my-name-display").style.display="none";
+  }
+  $("my-member-badge").style.display=(isMember&&!vip)?"inline-block":"none";
+  $("my-vip-badge").style.display=vip?"inline-block":"none";
+  $("my-ahead").textContent=ahead!=null?ahead:"—";
+  $("my-est").textContent=estMin>0?estMin:"~";
+  $("my-status").className="status-line wait";
+  $("my-status").textContent="排队中，请留意大屏叫号";
+  $("saved-info").style.display="block";
+  $("btn-retake").style.display="block";
+}
+// 上传头像
+function uploadAvatar(file){
+  var phone=String($("in-phone").value||"").trim();
+  if(!phone||!myIsMember){return}
+  if(file.size>3*1024*1024){$("av-tip").textContent="图片过大（超过 3MB），请压缩后重试";return}
+  var fd=new FormData();
+  fd.append("file",file);
+  fd.append("phone",phone);
+  $("av-tip").textContent="上传中…";
+  fetch("/api/upload-avatar",{method:"POST",body:fd}).then(function(r){return r.json()}).then(function(d){
+    if(d&&d.ok){
+      myAvatar=d.avatar;
+      $("av-preview").style.backgroundImage="url('"+myAvatar+"')";
+      $("av-tip").textContent="头像已设置，叫号时显示";
+    }else{$("av-tip").textContent="上传失败："+((d&&d.error)||"未知错误")}
+  }).catch(function(e){$("av-tip").textContent="上传失败："+e.message});
+}
+$("avatar-file-input").addEventListener("change",function(e){var f=e.target.files&&e.target.files[0];if(f){uploadAvatar(f);e.target.value=""}});
+// 叫号通知（左上角，会员才弹）
+function showCallNotify(number,machine,isMember,avatar,name,vip){
+  if(!isMember){return}
+  var box=$("call-notify");
+  box.className=vip?"vip":"";
+  box.classList.add("show");
+  // 名称优先显示
+  if(name){
+    $("cn-num").style.display="none";
+    $("cn-name").style.display="block";
+    $("cn-name").textContent=name;
+  }else{
+    $("cn-num").style.display="block";
+    $("cn-name").style.display="none";
+    $("cn-num").textContent=number;
+  }
+  $("cn-title").textContent=vip?"⭐ VIP 到号了":"到号了";
+  $("cn-sub").textContent="请前往 "+labelOf(machine,state.machines)+" 机台";
+  var avEl=$("cn-avatar");
+  if(avatar){avEl.style.backgroundImage="url('"+avatar+"')";avEl.classList.remove("empty");avEl.textContent=""}
+  else{avEl.style.backgroundImage="none";avEl.classList.add("empty");avEl.textContent="👤"}
+  try{if(navigator.vibrate)navigator.vibrate([200,100,200,200,100,300])}catch(e){}
+  // 浏器系统通知（离开页面也能收到）
+  try{
+    if("Notification" in window && Notification.permission==="granted"){
+      var title=vip?"⭐ VIP 到号了！":"🎉 到号了！";
+      var body=(name?name+" ":"")+"请前往 "+labelOf(machine,state.machines)+" 机台";
+      var n=new Notification(title,{body:body,tag:"call-notify",requireInteraction:true});
+      n.onclick=function(){window.focus();n.close()};
+    }
+  }catch(e){}
+}
+// 请求通知权限（取号时触发）
+function requestNotifyPermission(){
+  try{
+    if("Notification" in window && Notification.permission==="default"){
+      Notification.requestPermission().then(function(){});
+    }
+  }catch(e){}
+}
+function hideCallNotify(){$("call-notify").classList.remove("show")}
+$("btn-retake").addEventListener("click",function(){
+  if(!confirm("确定放弃当前号码吗？放弃后该号码将从大屏队列消失，需重新取号排队。"))return;
+  var btn=$("btn-retake");btn.disabled=true;btn.textContent="放弃中...";
+  apiPost("/api/cancel",{machine:myMachine,number:myNumber}).then(function(){
+    clearNumber();
+    if(evtSource){try{evtSource.close()}catch(e){}}
+    myNumber=null;myMachine=null;
+    $("result-card").classList.remove("show");
+    $("pick-card").style.display="block";
+    $("btn-take").disabled=false;$("btn-take").textContent="取号";
+    $("tip").textContent="已放弃号码。取号后号码会保存在本机，再次扫码可查看当前排队状态。";
+    btn.disabled=false;btn.textContent="放弃此号，重新取号";
+  }).catch(function(e){
+    btn.disabled=false;btn.textContent="放弃此号，重新取号";
+    $("tip").textContent="网络错误，重试："+e.message;
+  });
+});
+// 全局 state（用于动态机台渲染）
+var state={machines:[]};
+function refreshFromState(s){
+  if(!s)return;
+  state=s;
+  if(s.shopName)$("shop-name").textContent=s.shopName;
+  if(s.tagline)$("shop-tag").textContent=s.tagline;
+  // 动态机台按钮
+  if(s.machines&&s.machines.length){
+    var pickVisible=$("pick-card").style.display!=="none";
+    renderMachinePick(s.machines);
+  }
+  // 等待位置实时更新
+  if(myNumber&&myMachine){
+    var q=s.queues[myMachine]||[];
+    var idx=q.indexOf(myNumber);
+    var called=s.current[myMachine]===myNumber;
+    if(called){
+      $("my-status").className="status-line called";
+      $("my-status").textContent="🎉 到号了！请前往 "+labelOf(myMachine,s.machines)+" 机台";
+      $("my-ahead").textContent="0";
+      showCallNotify(myNumber,myMachine,myIsMember,myAvatar,myName,myVip);
+    }else if(idx>=0){
+      var oldAhead=parseInt($("my-ahead").textContent,10);
+      if(!isNaN(oldAhead)&&idx<oldAhead){
+        $("my-ahead").classList.remove("flash-ahead");
+        void $("my-ahead").offsetWidth;
+        $("my-ahead").classList.add("flash-ahead");
+      }
+      $("my-ahead").textContent=idx;
+      var hist=(s.waitHistory&&s.waitHistory[myMachine])||[];
+      var avg=hist.length?Math.round(hist.slice(-10).reduce(function(a,b){return a+b},0)/Math.min(hist.length,10)*10)/10:5;
+      $("my-est").textContent=Math.round(idx*avg*10)/10;
+      $("my-status").className="status-line wait";
+      $("my-status").textContent="排队中，前方还有 "+idx+" 位";
+    }else{
+      $("my-status").className="status-line wait";
+      $("my-status").textContent="号码已过号或已叫，请咨询前台";
+      $("my-ahead").textContent="—";
+    }
+  }
+}
+function connectSSE(){
+  try{if(evtSource)evtSource.close()}catch(e){}
+  evtSource=new EventSource("/api/events");
+  evtSource.onmessage=function(e){var d={};try{d=JSON.parse(e.data)}catch(err){return}
+    if(d.type==="sync")refreshFromState(d.state);
+    else if(d.type==="call"&&d.machine===myMachine&&d.number===myNumber){
+      $("my-status").className="status-line called";
+      $("my-status").textContent="🎉 到号了！请前往 "+labelOf(myMachine,state.machines)+" 机台";
+      $("my-ahead").textContent="0";
+      // 用 call 消息里的 name/vip 更新通知
+      var cName=d.name||myName,cVip=!!d.vip,cMember=!!d.member,cAvatar=d.avatar||myAvatar;
+      showCallNotify(myNumber,myMachine,cMember,cAvatar,cName,cVip);
+    }
+  };
+  evtSource.onerror=function(){try{evtSource.close()}catch(e){}setTimeout(connectSSE,5000)};
+}
+// 页面加载：检查是否有已保存的号码
+function init(){
+  fetch("/api/state").then(function(r){return r.json()}).then(function(s){
+    if(s&&s.prices){
+      state=s;
+      if(s.shopName)$("shop-name").textContent=s.shopName;
+      if(s.tagline)$("shop-tag").textContent=s.tagline;
+      if(s.machines&&s.machines.length)renderMachinePick(s.machines);
+      // 检查本地存储的号码
+      var saved=loadNumber();
+      if(saved&&saved.machine&&saved.number){
+        myNumber=saved.number;myMachine=saved.machine;myIsMember=!!saved.isMember;myAvatar=saved.avatar||null;
+        myName=saved.name||"";myVip=!!saved.vip;myVisits=saved.visits||0;
+        if(saved.phone){
+          $("in-phone").value=saved.phone;
+          if(saved.isMember){
+            $("member-tag").style.display="inline-block";
+            $("member-info-row").classList.add("show");
+            $("avatar-row").classList.add("show");
+            if(myVip){$("visits-line").className="visits-line vip";$("visits-line").textContent="⭐⭐⭐ VIP 尊享 · 累计 "+myVisits+" 次 ⭐⭐⭐"}
+            else{$("visits-line").className="visits-line";$("visits-line").textContent="您是第 "+myVisits+" 次光临"}
+            $("in-member-name").value=myName;
+            if(myAvatar){$("av-preview").style.backgroundImage="url('"+myAvatar+"')";$("av-tip").textContent="头像已设置，叫号时显示"}
+          }
+        }
+        var q=s.queues[myMachine]||[];
+        var idx=q.indexOf(myNumber);
+        var called=s.current[myMachine]===myNumber;
+        var ahead=idx>=0?idx:0;
+        var hist=(s.waitHistory&&s.waitHistory[myMachine])||[];
+        var avg=hist.length?Math.round(hist.slice(-10).reduce(function(a,b){return a+b},0)/Math.min(hist.length,10)*10)/10:5;
+        var est=idx>=0?Math.round(idx*avg*10)/10:0;
+        showResult(myMachine,myNumber,ahead,est,myIsMember,myName,myVip);
+        if(called){
+          $("my-status").className="status-line called";
+          $("my-status").textContent="🎉 到号了！请前往 "+labelOf(myMachine,s.machines)+" 机台";
+          $("my-ahead").textContent="0";
+        }else if(idx>=0){
+          $("my-status").className="status-line wait";
+          $("my-status").textContent="排队中，前方还有 "+idx+" 位";
+        }else{
+          $("my-status").className="status-line wait";
+          $("my-status").textContent="号码已过号或已叫，请咨询前台";
+        }
+        connectSSE();
+      }
+    }
+  }).catch(function(){});
+}
+init();
+})();
+</script>
+</body>
+</html>

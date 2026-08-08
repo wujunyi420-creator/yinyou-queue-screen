@@ -1,0 +1,12 @@
+{
+  "name": "yinyou-forum-cf",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "npx wrangler pages dev . --local",
+    "deploy": "npx wrangler pages deploy ."
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}

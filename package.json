@@ -1,0 +1,15 @@
+{
+  "name": "yinyou-queue-screen",
+  "version": "1.0.0",
+  "description": "音游窝社区 · 排队大屏 + 论坛 + AI审核",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=14"
+  },
+  "dependencies": {
+    "pg": "^8.11.3"
+  }
+}

@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>排队大屏 · 控制台</title>
+<style>
+:root{--bg-deep:#0F0E1E;--bg-panel:#1B1938;--bg-panel-raised:#242150;--bg-input:#15132C;--accent-maimai:#33E6C9;--accent-chunithm:#FFB238;--text-primary:#F4F2FF;--text-muted:#9490B8;--text-dim:#635F8A;--border:#322F5C;--danger:#FF5C7A;--ok:#33E6C9;--scan:#9B6BFF;--vip:#FFD86B;--font-main:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-main);font-size:14px;line-height:1.5}
+body{background-image:radial-gradient(circle at 12% -10%,rgba(51,230,201,0.08),transparent 45%),radial-gradient(circle at 88% 110%,rgba(255,178,56,0.08),transparent 45%);min-height:100vh}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 28px 80px}
+header.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-bottom:18px;margin-bottom:16px;border-bottom:1px solid var(--border)}
+header.topbar h1{font-size:20px;margin:0;font-weight:800;background:linear-gradient(90deg,var(--accent-maimai),var(--accent-chunithm));-webkit-background-clip:text;background-clip:text;color:transparent}
+header.topbar .sub{color:var(--text-muted);font-size:12px;margin-top:2px}
+header.topbar .actions{display:flex;gap:10px;flex-wrap:wrap}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:880px){.grid{grid-template-columns:1fr;gap:14px}.wrap{padding:14px 12px 70px}header.topbar{flex-direction:column;align-items:flex-start;gap:10px}header.topbar .actions{width:100%}header.topbar .actions .btn{flex:1;padding:11px 8px;font-size:13px}.addr-bar{font-size:11px}.addr-bar .url{word-break:break-all}.row2{grid-template-columns:1fr}.card{padding:14px 14px 16px}.card h2{font-size:15px}.price-editor th,.price-editor td{padding:4px}.price-editor td input{font-size:12px;padding:6px}.current-row .val{font-size:16px}button.btn{padding:11px 12px;font-size:13px}button.btn.small{padding:8px 10px;font-size:12px}button.btn.call{font-size:13px;padding:12px 14px}.queue-list li{font-size:12px;padding:6px 10px}.member-list li{font-size:12px}.ms-item{flex-wrap:wrap;gap:8px}.ms-item .ms-label{min-width:0}.bg-preview{height:120px}.toolbar .btn{flex:1}}
+.card{background:var(--bg-panel);border:1px solid var(--border);border-radius:14px;padding:18px 18px 20px}
+.card.full{grid-column:1/-1}
+.card h2{margin:0 0 14px;font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px}
+.card h2 .dot{width:8px;height:8px;border-radius:50%;background:var(--accent-maimai)}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.field:last-child{margin-bottom:0}
+.field label{color:var(--text-muted);font-size:12px}
+.field input{background:var(--bg-input);border:1px solid var(--border);color:var(--text-primary);border-radius:8px;padding:9px 11px;font-size:14px;font-family:inherit;outline:none;transition:border-color 0.2s ease}
+.field input:focus{border-color:var(--accent-maimai)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.machine-labels{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:680px){.machine-labels{grid-template-columns:1fr}}
+button.btn{background:var(--bg-panel-raised);border:1px solid var(--border);color:var(--text-primary);border-radius:8px;padding:9px 14px;font-size:13px;font-family:inherit;cursor:pointer;transition:background 0.15s ease,border-color 0.15s ease,transform 0.05s ease}
+button.btn:hover{background:#2D2A5E}
+button.btn:active{transform:translateY(1px)}
+button.btn.danger{background:transparent;border-color:var(--danger);color:var(--danger)}
+button.btn.danger:hover{background:rgba(255,92,122,0.12)}
+button.btn.small{padding:5px 9px;font-size:12px}
+button.btn.call{background:linear-gradient(90deg,var(--accent-chunithm),#FF8E3C);color:#2a1605;border:none;font-weight:800;font-size:14px;padding:11px 16px}
+button.btn.call.maimai{background:linear-gradient(90deg,var(--accent-maimai),#2BC9B0);color:#06231F}
+.price-editor table{width:100%;border-collapse:collapse}
+.price-editor th,.price-editor td{padding:6px;text-align:left;vertical-align:middle}
+.price-editor th{color:var(--text-muted);font-size:12px;font-weight:600}
+.price-editor td input{width:100%;background:var(--bg-input);border:1px solid var(--border);color:var(--text-primary);border-radius:6px;padding:7px 9px;font-size:13px;font-family:inherit;outline:none}
+.price-editor td input:focus{border-color:var(--accent-maimai)}
+.price-editor td.amt input{text-align:right}
+.queue-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:20px;margin-top:20px}
+@media(max-width:880px){.queue-grid{grid-template-columns:1fr}}
+.queue-block{margin-bottom:14px}
+.queue-block:last-child{margin-bottom:0}
+.queue-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px}
+.queue-head .title{font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px}
+.queue-head .title .pill{font-size:11px;color:var(--text-dim);background:var(--bg-input);border:1px solid var(--border);border-radius:20px;padding:2px 9px}
+.queue-head .avg{font-size:11px;color:var(--text-dim)}
+.queue-head .avg b{color:var(--accent-maimai);font-weight:700}
+.current-row{display:flex;align-items:center;gap:10px;background:var(--bg-input);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:10px}
+.current-row .lbl{color:var(--text-muted);font-size:12px}
+.current-row .val{font-weight:800;font-size:18px;font-variant-numeric:tabular-nums;min-width:40px;text-align:center}
+.current-row .val.empty{color:var(--text-dim);font-size:13px;font-weight:500}
+.add-row{display:flex;gap:8px;margin-bottom:8px}
+.add-row input{flex:1}
+.queue-list{list-style:none;margin:0;padding:0;max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;background:var(--bg-input)}
+.queue-list li{display:flex;align-items:center;justify-content:space-between;padding:7px 12px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;gap:8px}
+.queue-list li:last-child{border-bottom:none}
+.queue-list li .left{display:flex;align-items:center;gap:8px}
+.queue-list li .pos{color:var(--text-dim);font-size:12px}
+.queue-list li .num{font-weight:700}
+.queue-list li .num.scan{color:var(--scan)}
+.queue-list li .num.member-num{color:var(--vip)}
+.queue-list li .tag{font-size:10px;background:var(--scan);color:#fff;border-radius:4px;padding:1px 5px;font-weight:600}
+.queue-list li .tag.vip-tag{background:linear-gradient(90deg,#FFD86B,#FFB238);color:#3a2400}
+.queue-list li .est{font-size:11px;color:var(--text-dim);background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:2px 7px;white-space:nowrap}
+.queue-list li .ops{display:flex;gap:5px}
+.queue-list .empty-note{color:var(--text-dim);justify-content:center;padding:14px;font-size:12px}
+.status-line{margin-top:8px;font-size:12px;color:var(--text-dim);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.status-line .led{width:8px;height:8px;border-radius:50%;background:var(--text-dim)}
+.status-line.ok .led{background:var(--ok);box-shadow:0 0 6px var(--ok)}
+.status-line.bad .led{background:var(--danger)}
+.addr-bar{background:var(--bg-panel);border:1px solid var(--border);border-radius:12px;padding:10px 14px;margin-bottom:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--text-muted)}
+.addr-bar .url{color:var(--accent-maimai);font-family:ui-monospace,"SF Mono",Menlo,monospace;user-select:all}
+.addr-bar .copy{background:var(--bg-panel-raised);border:1px solid var(--border);color:var(--text-primary);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;font-family:inherit}
+.hint{color:var(--text-dim);font-size:12px;margin-top:8px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap}
+.bg-preview{width:100%;height:160px;border-radius:10px;border:1px dashed var(--border);background:var(--bg-input);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;color:var(--text-dim);font-size:12px;margin-bottom:10px}
+.bg-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.bg-controls input[type="file"]{display:none}
+.bg-controls .file-label{background:var(--bg-panel-raised);border:1px solid var(--border);color:var(--text-primary);border-radius:8px;padding:9px 14px;font-size:13px;cursor:pointer;font-family:inherit;transition:background 0.15s ease}
+.bg-controls .file-label:hover{background:#2D2A5E}
+.bg-slider-row{display:flex;align-items:center;gap:10px;margin-top:4px}
+.bg-slider-row label{color:var(--text-muted);font-size:12px;min-width:62px}
+.bg-slider-row input[type="range"]{flex:1;accent-color:var(--accent-maimai)}
+.bg-slider-row .val{color:var(--accent-maimai);font-weight:700;font-variant-numeric:tabular-nums;min-width:42px;text-align:right}
+.member-list{list-style:none;margin:8px 0 0;padding:0;max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;background:var(--bg-input)}
+.member-list li{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--border);gap:10px}
+.member-list li:last-child{border-bottom:none}
+.member-list li .m-left{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
+.member-list li .m-phone{font-variant-numeric:tabular-nums;font-weight:600;font-size:13px}
+.member-list li .m-name{font-size:12px;color:var(--text-muted);cursor:text;border-radius:4px;padding:1px 4px;outline:none;min-width:40px}
+.member-list li .m-name:hover{background:var(--bg-deep)}
+.member-list li .m-name:focus{background:var(--bg-deep);color:var(--accent-maimai)}
+.member-list li .m-meta{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-dim)}
+.member-list li .m-visits{background:var(--bg-panel);border:1px solid var(--border);border-radius:10px;padding:1px 8px;font-variant-numeric:tabular-nums}
+.member-list li .tag-gold{font-size:10px;background:linear-gradient(90deg,#FFD86B,#FFB238);color:#3a2400;border-radius:4px;padding:1px 6px;font-weight:700}
+.member-list li .tag-vip{font-size:10px;background:linear-gradient(90deg,#FF5C7A,#FFD86B);color:#3a0a1a;border-radius:4px;padding:1px 6px;font-weight:800;animation:vipBlink 1s steps(2) infinite}
+@keyframes vipBlink{0%{opacity:1}50%{opacity:0.5}100%{opacity:1}}
+.member-list .empty-note{color:var(--text-dim);justify-content:center;padding:14px;font-size:12px}
+.member-add-row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.member-add-row input{flex:1;min-width:120px}
+.member-count{font-size:12px;color:var(--text-dim);margin-left:8px}
+.machine-status-row{display:flex;flex-direction:column;gap:10px;margin-top:10px}
+.ms-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg-deep);border-radius:10px;border:1px solid var(--border);flex-wrap:wrap}
+.ms-label{font-weight:700;min-width:70px}
+.ms-badge{font-size:12px;font-weight:700;padding:3px 10px;border-radius:12px}
+.ms-badge.ok{background:rgba(51,230,201,0.2);color:#33E6C9}
+.ms-badge.repair{background:rgba(255,90,90,0.2);color:#ff5a5a}
+.machine-add-row{display:flex;gap:8px;margin-top:12px}
+.machine-add-row input{flex:1}
+button.btn.sm{padding:5px 12px;font-size:12px}
+#lock-overlay{position:fixed;inset:0;z-index:200;background:rgba(6,5,16,0.97);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px}
+#lock-overlay.hide{display:none}
+#lock-overlay .lock-icon{font-size:48px}
+#lock-overlay .lock-title{font-size:22px;font-weight:800;background:linear-gradient(90deg,var(--accent-maimai),var(--accent-chunithm));-webkit-background-clip:text;background-clip:text;color:transparent}
+#lock-overlay .lock-sub{font-size:13px;color:var(--text-muted);margin-bottom:6px}
+#lock-box{display:flex;gap:8px;align-items:center;max-width:340px;width:100%}
+#lock-box input{flex:1;background:var(--bg-input);border:1px solid var(--border);color:var(--text-primary);border-radius:10px;padding:12px 14px;font-size:15px;font-family:inherit;outline:none;text-align:center;letter-spacing:0.1em}
+#lock-box input:focus{border-color:var(--accent-maimai)}
+#lock-box button{padding:12px 18px;font-size:14px;font-weight:700;background:linear-gradient(90deg,var(--accent-maimai),var(--accent-chunithm));color:#06231F;border:none;border-radius:10px;cursor:pointer;font-family:inherit;white-space:nowrap}
+#lock-tip{font-size:12px;color:var(--danger);min-height:1em}
+.settings-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:10px}
+@media(max-width:880px){.settings-row{grid-template-columns:1fr}}
+.settings-item{background:var(--bg-deep);border:1px solid var(--border);border-radius:10px;padding:12px}
+.settings-item .si-label{font-size:12px;color:var(--text-muted);margin-bottom:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.settings-item .si-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.settings-item input[type="number"]{width:70px;background:var(--bg-input);border:1px solid var(--border);color:var(--text-primary);border-radius:8px;padding:7px 9px;font-size:14px;font-family:inherit;outline:none}
+.settings-item input[type="time"]{background:var(--bg-input);border:1px solid var(--border);color:var(--text-primary);border-radius:8px;padding:7px 9px;font-size:14px;font-family:inherit;outline:none}
+.switch{position:relative;display:inline-block;width:46px;height:24px;flex-shrink:0}
+.switch input{opacity:0;width:0;height:0}
+.switch .slider{position:absolute;cursor:pointer;inset:0;background:var(--border);border-radius:24px;transition:0.2s}
+.switch .slider:before{content:"";position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:0.2s}
+.switch input:checked+.slider{background:var(--accent-maimai)}
+.switch input:checked+.slider:before{transform:translateX(22px)}
+.pwd-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px}
+.pwd-row input{flex:1;min-width:120px;background:var(--bg-input);border:1px solid var(--border);color:var(--text-primary);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none}
+/* 公告管理 */
+.ann-list{list-style:none;margin:10px 0 0;padding:0;max-height:300px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;background:var(--bg-input)}
+.ann-list li{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-bottom:1px solid var(--border)}
+.ann-list li:last-child{border-bottom:none}
+.ann-list li .ann-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ann-list li .ann-title{font-weight:700;font-size:13px;color:var(--accent-chunithm)}
+.ann-list li .ann-content{font-size:12px;color:var(--text-muted);line-height:1.5}
+.ann-list li .ann-ops{display:flex;gap:6px;flex-shrink:0}
+.ann-list .empty-note{color:var(--text-dim);justify-content:center;padding:14px;font-size:12px}
+.ann-add-row{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.ann-add-row input,.ann-add-row textarea{width:100%;background:var(--bg-input);border:1px solid var(--border);color:var(--text-primary);border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;outline:none}
+.ann-add-row input:focus,.ann-add-row textarea:focus{border-color:var(--accent-maimai)}
+.ann-add-row textarea{resize:vertical;min-height:60px}
+.ann-add-row .ann-actions{display:flex;gap:8px}
+.ann-add-row .ann-actions .btn{flex:1}
+/* 拦截词管理 */
+.bw-stats{font-size:12px;color:var(--text-muted);margin:4px 0 10px}
+.bw-cloud{display:flex;flex-wrap:wrap;gap:6px;max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;padding:10px;background:var(--bg-input);margin-bottom:10px}
+.bw-chip{display:inline-flex;align-items:center;gap:4px;background:rgba(255,92,122,0.12);border:1px solid rgba(255,92,122,0.35);color:var(--danger);border-radius:14px;padding:4px 8px 4px 10px;font-size:12px;font-weight:600}
+.bw-chip .bw-x{cursor:pointer;color:var(--danger);font-weight:800;font-size:14px;line-height:1;padding:0 2px;border:none;background:none}
+.bw-chip .bw-x:hover{color:#fff;background:var(--danger);border-radius:50%}
+.bw-empty{color:var(--text-dim);text-align:center;padding:20px;font-size:12px;width:100%}
+.bw-add-row{display:flex;gap:8px;flex-wrap:wrap}
+.bw-add-row input{flex:1;min-width:180px;background:var(--bg-input);border:1px solid var(--border);color:var(--text-primary);border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;outline:none}
+.bw-add-row input:focus{border-color:var(--accent-maimai)}
+.bw-add-row .btn{flex-shrink:0}
+</style>
+</head>
+<body>
+<div id="lock-overlay">
+<div class="lock-icon">🔒</div>
+<div class="lock-title">控制台已锁定</div>
+<div class="lock-sub">请输入管理密码以继续操作</div>
+<div id="lock-box"><input type="password" id="lock-input" placeholder="管理密码" autocomplete="off"><button type="button" id="lock-btn">解锁</button></div>
+<div id="lock-tip"></div>
+</div>
+<div class="wrap">
+<header class="topbar">
+<div><h1>排队大屏控制台</h1><div class="sub">改 LOGO / 店名 / 价格 / 排队 · 支持扫码取号 · 多机台 · 会员累计</div></div>
+<div class="actions"><button class="btn" id="btn-sync">立即同步</button><button class="btn danger" id="btn-reset">重置全部</button></div>
+</header>
+<div class="addr-bar"><span>大屏地址：</span><span class="url" id="display-url">检测中…</span><button class="copy" id="btn-copy-display">复制</button><span style="margin-left:12px;">取号页：</span><span class="url" id="take-url">检测中…</span><button class="copy" id="btn-copy-take">复制</button></div>
+<div class="status-line" id="status"><span class="led"></span><span id="status-text">连接中…</span></div>
+<div class="grid" style="margin-top:14px;">
+<section class="card full">
+<h2><span class="dot"></span>店面信息（LOGO / 店名 / 机台名）</h2>
+<div class="row2"><div class="field"><label>店名 / LOGO 文字</label><input type="text" id="in-shopname" placeholder="你的店名 LOGO"></div><div class="field"><label>标语</label><input type="text" id="in-tagline" placeholder="欢迎光临 · 排队中请留意大屏叫号"></div></div>
+<div class="machine-labels" id="machine-labels"></div>
+</section>
+<section class="card full">
+<h2><span class="dot"></span>价格表</h2>
+<div class="price-editor"><table><thead><tr><th style="width:55%">项目</th><th style="width:30%">价格</th><th style="width:15%;text-align:right">操作</th></tr></thead><tbody id="price-body"></tbody></table></div>
+<div class="toolbar" style="margin-top:10px;"><button class="btn small" id="btn-price-add">+ 新增一行</button></div>
+</section>
+<section class="card full">
+<h2><span class="dot"></span>大屏背景图</h2>
+<div class="bg-preview" id="bg-preview">未上传背景图</div>
+<div class="bg-controls">
+<label class="file-label" for="bg-file-input">选择图片上传</label>
+<input type="file" id="bg-file-input" accept="image/png,image/jpeg,image/gif,image/webp">
+<button class="btn danger" id="btn-bg-clear">清除背景</button>
+<span class="hint" id="bg-tip" style="margin:0;"></span>
+</div>
+<div class="bg-slider-row"><label>背景亮度</label><input type="range" id="bg-brightness" min="0" max="100" value="60"><span class="val" id="bg-brightness-val">60</span></div>
+<p class="hint">提示：上传后大屏会自动切换为该背景图。亮度越低，背景越暗，文字越清晰；亮度越高，背景越显眼。</p>
+</section>
+<section class="card full">
+<h2><span class="dot" style="background:#5ad1ff;"></span>机台管理</h2>
+<div class="machine-status-row" id="machine-status-list"></div>
+<div class="machine-add-row"><input type="text" id="in-machine-label" placeholder="输入机台名（如：太鼓达人）"><button class="btn" id="btn-machine-add">+ 添加机台</button></div>
+<p class="hint">支持动态增删改机台。维护中的机台会停止扫码取号，大屏显示"维护中"标识。删除机台会清空该机台所有排队数据。</p>
+</section>
+<section class="card full">
+<h2><span class="dot" style="background:#9B6BFF;"></span>系统设置</h2>
+<div class="settings-row">
+<div class="settings-item">
+<div class="si-label">自动叫号<label class="switch"><input type="checkbox" id="set-autocall"><span class="slider"></span></label></div>
+<div class="si-row"><span style="font-size:13px;color:var(--text-muted)">叫号后</span><input type="number" id="set-autocall-dur" min="1" max="60" value="8"><span style="font-size:13px;color:var(--text-muted)">分钟自动叫下一位</span></div>
+<p class="hint" style="margin-top:8px">开启后，顾客到号超时未结束会自动叫下一位，无需店员手动点。</p>
+</div>
+<div class="settings-item">
+<div class="si-label">打烊时间</div>
+<div class="si-row"><input type="time" id="set-closing"><button class="btn sm" id="btn-closing-clear">关闭</button></div>
+<p class="hint" style="margin-top:8px">到点自动清空所有队列与叫号。每天只触发一次。</p>
+</div>
+</div>
+<div class="settings-item" style="margin-top:14px">
+<div class="si-label">修改管理密码</div>
+<div class="pwd-row"><input type="password" id="pwd-old" placeholder="原密码"><input type="password" id="pwd-new" placeholder="新密码（至少4位）"><button class="btn sm" id="btn-pwd-change">修改</button></div>
+<p class="hint" style="margin-top:8px">默认密码 123456，建议尽快修改。仅控制台需要密码，取号页和大屏不受影响。</p>
+</div>
+</section>
+<section class="card full">
+<h2><span class="dot" style="background:#FFD86B;"></span>会员管理<span class="member-count" id="member-count">0 位会员</span></h2>
+<div class="member-add-row"><input type="tel" id="in-member-phone" placeholder="手机号" maxlength="11"><input type="text" id="in-member-name" placeholder="会员名称（可选）"><button class="btn" id="btn-member-add">添加会员</button></div>
+<ul class="member-list" id="member-list"></ul>
+<p class="hint">会员扫码取号时号码显示金色。叫号即累计游玩次数，满 20 次解锁 VIP 绚丽特效。点击会员名称可直接编辑。</p>
+</section>
+<section class="card full">
+<h2><span class="dot" style="background:#FFB238;"></span>社区公告管理</h2>
+<ul class="ann-list" id="ann-list"></ul>
+<div class="ann-add-row">
+<input type="text" id="ann-title" placeholder="公告标题（如：本周活动 · maimai 段位赛）">
+<textarea id="ann-content" placeholder="公告内容…"></textarea>
+<div class="ann-actions">
+<button class="btn" id="btn-ann-add">+ 添加公告</button>
+<button class="btn" id="btn-ann-cancel" style="display:none;">取消编辑</button>
+</div>
+</div>
+<p class="hint">公告会显示在论坛首页顶部。点击「编辑」可修改已存在的公告，点击「删除」可移除。</p>
+</section>
+<section class="card full">
+<h2><span class="dot" style="background:#FF5C7A;"></span>拦截词管理</h2>
+<div class="bw-stats" id="bw-stats">共 0 个拦截词</div>
+<div class="bw-cloud" id="bw-cloud"></div>
+<div class="bw-add-row">
+<input type="text" id="bw-input" placeholder="输入要拦截的词，多个词用空格或逗号分隔" maxlength="100">
+<button class="btn" id="btn-bw-add">+ 添加</button>
+<button class="btn" id="btn-bw-clear-all" style="background:transparent;border:1px solid var(--border);color:var(--text-muted);">清空全部</button>
+</div>
+<p class="hint">含拦截词的帖子和评论将被拒绝发布。点击词组右侧的 × 可删除该词。多个词可一次性粘贴添加（用空格/逗号/换行分隔）。</p>
+</section>
+</div>
+<div class="queue-grid" id="queue-grid"></div>
+<p class="hint" style="margin-top:16px;">提示：C 开头号码为扫码取号自动生成（如 C001），手动加号请用其他号码。叫号语音在大屏播报。改数据自动同步。</p>
+</div>
+<script>
+(function(){"use strict";
+function defaultState(){return{shopName:"你的店名 LOGO",tagline:"欢迎光临 · 排队中请留意大屏叫号",machines:[{id:"maimai",label:"舞萌",status:"ok"},{id:"chunithm",label:"中二节奏",status:"ok"}],prices:[{item:"舞萌 单曲",amount:"¥10"},{item:"中二节奏 单曲",amount:"¥10"},{item:"畅玩 1 小时",amount:"¥30"},{item:"会员卡",amount:"¥5"}],scanCounter:{},queues:{},enqueuedAt:{},current:{},waitHistory:{},membership:{log:[]},members:[],numberMeta:{},announcements:[],blockedWords:[]}}
+var state=defaultState();
+function apiPost(p,b){return fetch(p,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(b)}).then(function(r){return r.json()}).catch(function(e){setStatus(false,"网络错误："+e.message);throw e})}
+function pushSync(){return apiPost("/api/sync",{state:state}).then(function(){setStatus(true,"已同步")}).catch(function(){})}
+function $(id){return document.getElementById(id)}
+function machineIds(){return(state.machines||[]).map(function(m){return m.id})}
+function findMachine(id){var arr=(state.machines||[]).filter(function(m){return m.id===id});return arr.length>0?arr[0]:null}
+function labelOf(m){var mc=findMachine(m);return mc?mc.label:m}
+function statusOf(m){var mc=findMachine(m);return(mc&&mc.status)||(state.machineStatus&&state.machineStatus[m])||"ok"}
+function escHtml(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function avgWaitMin(m){var h=(state.waitHistory&&state.waitHistory[m])||[];if(h.length===0)return 0;var r=h.slice(-10);var s=r.reduce(function(a,b){return a+b},0);return Math.round((s/r.length)*10)/10}
+function estWaitMin(m,number){var q=state.queues[m]||[];var idx=q.indexOf(number);if(idx<0)return 0;var avg=avgWaitMin(m);if(avg<=0)avg=5;return Math.round(idx*avg*10)/10}
+function isScanNum(n){return String(n).toUpperCase().indexOf("C")===0}
+function metaOf(m,num){return(state.numberMeta&&state.numberMeta[m]&&state.numberMeta[m][num])||{}}
+function renderShop(){$("in-shopname").value=state.shopName||"";$("in-tagline").value=state.tagline||""}
+// 机台名称输入框（动态生成，结构变化才重建，避免失焦）
+function ensureMachineLabels(){
+  var box=$("machine-labels");
+  var machines=state.machines||[];
+  var existing=box.querySelectorAll("input[data-mlabel]");
+  var ids=machines.map(function(m){return m.id});
+  var existIds=Array.prototype.map.call(existing,function(e){return e.dataset.mlabel});
+  var same=existing.length===machines.length&&ids.every(function(id,i){return existIds[i]===id});
+  if(!same){
+    box.innerHTML="";
+    machines.forEach(function(mc){
+      var d=document.createElement("div");
+      d.className="field";
+      d.innerHTML='<label>机台名称（'+escHtml(mc.id)+'）</label><input type="text" data-mlabel="'+escHtml(mc.id)+'" value="'+escHtml(mc.label)+'" placeholder="机台名">';
+      box.appendChild(d);
+    });
+    box.querySelectorAll("input[data-mlabel]").forEach(function(inp){
+      inp.addEventListener("blur",function(){
+        var id=inp.dataset.mlabel,label=inp.value.trim();
+        if(!label){label=labelOf(id);inp.value=label}
+        apiPost("/api/machine-rename",{id:id,label:label}).then(function(d){
+          if(d&&d.ok){state.machines=d.machines;var mc=findMachine(id);if(mc)mc.label=label;if(!state.machineLabels)state.machineLabels={};state.machineLabels[id]=label;renderMachineStatus();renderQueues();setStatus(true,"已重命名："+label)}
+        }).catch(function(){});
+      });
+    });
+  }else{
+    // 只更新值（不重建）
+    existing.forEach(function(inp){
+      var mc=findMachine(inp.dataset.mlabel);
+      if(mc&&document.activeElement!==inp)inp.value=mc.label;
+    });
+  }
+}
+function renderPrices(){var b=$("price-body");b.innerHTML="";state.prices.forEach(function(r,idx){var tr=document.createElement("tr");tr.innerHTML='<td><input type="text" data-pi="'+idx+'" data-pf="item" value="'+escHtml(r.item)+'"></td><td class="amt"><input type="text" data-pi="'+idx+'" data-pf="amount" value="'+escHtml(r.amount)+'"></td><td style="text-align:right"><button class="btn small danger" data-pdel="'+idx+'">删除</button></td>';b.appendChild(tr)})}
+// 队列管理卡片（动态，结构变化才重建）
+function ensureQueueCards(){
+  var box=$("queue-grid");
+  var machines=state.machines||[];
+  var existing=box.querySelectorAll(".queue-block[data-machine]");
+  var ids=machines.map(function(m){return m.id});
+  var existIds=Array.prototype.map.call(existing,function(e){return e.dataset.machine});
+  var same=existing.length===machines.length&&ids.every(function(id,i){return existIds[i]===id});
+  if(same)return;
+  box.innerHTML="";
+  machines.forEach(function(mc){
+    var m=mc.id;
+    var sec=document.createElement("section");
+    sec.className="card";
+    sec.innerHTML='<h2><span class="dot"></span>'+escHtml(mc.label)+' 排队管理</h2>'+
+      '<div class="queue-block" data-machine="'+escHtml(m)+'">'+
+      '<div class="queue-head"><div class="title">当前叫号 <span class="pill" id="cur-text-'+escHtml(m)+'">暂无</span></div><div class="avg">平均等待 <b id="avg-'+escHtml(m)+'">—</b> 分</div></div>'+
+      '<div class="current-row"><span class="lbl">当前</span><span class="val empty" id="cur-val-'+escHtml(m)+'">—</span><button class="btn call" data-act="next" data-machine="'+escHtml(m)+'" style="margin-left:auto;">叫下一位</button></div>'+
+      '<div class="add-row"><input type="text" id="in-add-'+escHtml(m)+'" placeholder="输入号码（勿用 C 开头，C 为扫码专用）"><button class="btn" data-act="add" data-machine="'+escHtml(m)+'">加入</button></div>'+
+      '<ul class="queue-list" id="list-'+escHtml(m)+'"></ul>'+
+      '<div class="toolbar" style="margin-top:8px;"><button class="btn small" data-act="recall" data-machine="'+escHtml(m)+'">重叫当前</button><button class="btn small" data-act="clear-cur" data-machine="'+escHtml(m)+'">清空当前</button><button class="btn small danger" data-act="clear-q" data-machine="'+escHtml(m)+'">清空队列</button></div>'+
+      '</div>';
+    box.appendChild(sec);
+    var inp=$("in-add-"+m);
+    if(inp){inp.addEventListener("keydown",function(e){if(e.key==="Enter"){addQueue(m,inp.value);inp.value=""}})}
+  });
+}
+function renderQueue(m){
+  var q=state.queues[m]||[],cu=state.current[m];
+  var cv=$("cur-val-"+m),ct=$("cur-text-"+m),ag=$("avg-"+m),l=$("list-"+m);
+  if(!cv)return;
+  cv.textContent=cu||"—";cv.classList.toggle("empty",!cu);ct.textContent=cu||"暂无";
+  ag.textContent=avgWaitMin(m)>0?avgWaitMin(m):"—";
+  l.innerHTML="";
+  if(q.length===0){var li=document.createElement("li");li.className="empty-note";li.textContent="队列为空（顾客可扫码取号）";l.appendChild(li);return}
+  q.forEach(function(num,idx){
+    li=document.createElement("li");
+    var meta=metaOf(m,num),isMember=!!meta.member,isVip=!!meta.vip;
+    var left=document.createElement("span");left.className="left";
+    var pos=document.createElement("span");pos.className="pos";pos.textContent=(idx+1)+".";
+    var n=document.createElement("span");n.className="num"+(isScanNum(num)?" scan":"")+(isMember?" member-num":"");n.textContent=escHtml(num);
+    left.appendChild(pos);left.appendChild(n);
+    if(isScanNum(num)){var tag=document.createElement("span");tag.className="tag";tag.textContent="扫码";left.appendChild(tag)}
+    if(isVip){var vt=document.createElement("span");vt.className="tag vip-tag";vt.textContent="VIP";left.appendChild(vt)}
+    else if(isMember){var mt=document.createElement("span");mt.className="tag";mt.style.background="linear-gradient(90deg,#FFD86B,#FFB238)";mt.style.color="#3a2400";mt.textContent="会员";left.appendChild(mt)}
+    var est=document.createElement("span");est.className="est";est.textContent=estWaitMin(m,num)>0?("约"+estWaitMin(m,num)+"分"):"等待";
+    var ops=document.createElement("span");ops.className="ops";ops.innerHTML='<button class="btn small" data-qcall="'+idx+'" data-machine="'+m+'">叫号</button><button class="btn small" data-qup="'+idx+'" data-machine="'+m+'">↑</button><button class="btn small danger" data-qdel="'+idx+'" data-machine="'+m+'">删</button>';
+    li.appendChild(left);li.appendChild(est);li.appendChild(ops);l.appendChild(li);
+  });
+}
+function renderQueues(){ensureQueueCards();machineIds().forEach(renderQueue)}
+// 机台状态列表（动态）
+function renderMachineStatus(){
+  var box=$("machine-status-list");
+  box.innerHTML="";
+  (state.machines||[]).forEach(function(mc){
+    var m=mc.id,st=mc.status||statusOf(m),isRepair=st==="repair";
+    var div=document.createElement("div");
+    div.className="ms-item";
+    div.innerHTML='<span class="ms-label">'+escHtml(mc.label)+'</span>'+
+      '<span class="ms-badge '+(isRepair?"repair":"ok")+'">'+(isRepair?"维护中":"可用")+'</span>'+
+      '<button class="btn sm" data-mstoggle="'+escHtml(m)+'">'+(isRepair?"恢复可用":"设为维护中")+'</button>'+
+      '<button class="btn sm" data-mrename="'+escHtml(m)+'">重命名</button>'+
+      '<button class="btn sm danger" data-mremove="'+escHtml(m)+'">删除</button>';
+    box.appendChild(div);
+  });
+}
+// 会员列表（对象数组：手机号+名称+次数+VIP）
+function renderMembers(){
+  var list=$("member-list"),count=$("member-count");
+  var arr=state.members||[];
+  count.textContent=arr.length+" 位会员";
+  list.innerHTML="";
+  if(arr.length===0){var li=document.createElement("li");li.className="empty-note";li.textContent="暂无会员（添加后，该手机号扫码取号时号码显示金色）";list.appendChild(li);return}
+  arr.forEach(function(mb,idx){
+    li=document.createElement("li");
+    var visits=mb.visits||0,isVip=visits>=20;
+    var left=document.createElement("div");left.className="m-left";
+    var ph=document.createElement("span");ph.className="m-phone";ph.textContent=escHtml(mb.phone);
+    var nm=document.createElement("span");nm.className="m-name";nm.setAttribute("contenteditable","true");nm.setAttribute("data-mphone",escHtml(mb.phone));nm.textContent=mb.name?("名称："+escHtml(mb.name)):"点击编辑名称";
+    if(!mb.name)nm.style.color="var(--text-dim)";
+    left.appendChild(ph);left.appendChild(nm);
+    var meta=document.createElement("span");meta.className="m-meta";
+    var vis=document.createElement("span");vis.className="m-visits";vis.textContent=visits+" 次";
+    meta.appendChild(vis);
+    if(isVip){var vtag=document.createElement("span");vtag.className="tag-vip";vtag.textContent="VIP";meta.appendChild(vtag)}
+    else if(visits>0){var gtag=document.createElement("span");gtag.className="tag-gold";gtag.textContent="会员";meta.appendChild(gtag)}
+    var del=document.createElement("button");del.className="btn small danger";del.setAttribute("data-mdel",idx);del.textContent="删除";
+    meta.appendChild(del);
+    li.appendChild(left);li.appendChild(meta);list.appendChild(li);
+  });
+}
+function renderBg(){
+  var prev=$("bg-preview"),slider=$("bg-brightness"),valEl=$("bg-brightness-val");
+  var img=state.bgImage, bri=state.bgBrightness!=null?state.bgBrightness:60;
+  if(img){prev.style.backgroundImage="url('"+img+"')";prev.textContent=""}
+  else{prev.style.backgroundImage="none";prev.textContent="未上传背景图"}
+  slider.value=bri;valEl.textContent=bri;
+}
+function renderAll(){renderShop();ensureMachineLabels();renderPrices();renderQueues();renderBg();renderMachineStatus();renderMembers();renderSettings();renderAnnouncements();renderBlockedWords()}
+// 公告管理
+var editingAnnId="";
+function renderAnnouncements(){
+  var list=$("ann-list");
+  var arr=Array.isArray(state.announcements)?state.announcements:[];
+  if(!arr.length){list.innerHTML='<li class="empty-note">暂无公告，添加后会显示在论坛首页</li>';return}
+  list.innerHTML="";
+  arr.forEach(function(a){
+    var li=document.createElement("li");
+    li.innerHTML='<div class="ann-head">'+
+      '<div class="ann-title">'+escHtml(a.title||"（无标题）")+'</div>'+
+      '<div class="ann-ops">'+
+        '<button class="btn small" data-annedit="'+escHtml(a.id)+'">编辑</button>'+
+        '<button class="btn small danger" data-anndel="'+escHtml(a.id)+'">删除</button>'+
+      '</div>'+
+    '</div>'+
+    (a.content?('<div class="ann-content">'+escHtml(a.content)+'</div>'):'');
+    list.appendChild(li);
+  });
+}
+function submitAnnouncement(){
+  var title=String($("ann-title").value||"").trim();
+  var content=String($("ann-content").value||"").trim();
+  if(!title&&!content){setStatus(false,"标题和内容不能全为空");return}
+  apiPost("/api/announcements",{id:editingAnnId||"",title:title,content:content}).then(function(d){
+    if(d&&d.ok){
+      state.announcements=d.announcements||[];
+      renderAnnouncements();
+      $("ann-title").value="";
+      $("ann-content").value="";
+      cancelAnnEdit();
+      setStatus(true,editingAnnId?"公告已更新":"公告已添加");
+    }else{setStatus(false,(d&&d.error)||"操作失败")}
+  }).catch(function(){setStatus(false,"网络错误")});
+}
+function editAnnouncement(id){
+  var a=(state.announcements||[]).filter(function(x){return x.id===id})[0];
+  if(!a)return;
+  editingAnnId=id;
+  $("ann-title").value=a.title||"";
+  $("ann-content").value=a.content||"";
+  $("btn-ann-add").textContent="保存修改";
+  $("btn-ann-cancel").style.display="inline-block";
+  $("ann-title").focus();
+}
+function cancelAnnEdit(){
+  editingAnnId="";
+  $("btn-ann-add").textContent="+ 添加公告";
+  $("btn-ann-cancel").style.display="none";
+}
+function deleteAnnouncement(id){
+  if(!confirm("确定删除这条公告吗？"))return;
+  apiPost("/api/announcements/delete",{id:id}).then(function(d){
+    if(d&&d.ok){
+      state.announcements=d.announcements||[];
+      renderAnnouncements();
+      cancelAnnEdit();
+      setStatus(true,"公告已删除");
+    }else{setStatus(false,(d&&d.error)||"删除失败")}
+  }).catch(function(){setStatus(false,"网络错误")});
+}
+// 拦截词管理
+function renderBlockedWords(){
+  var cloud=$("bw-cloud");
+  var stats=$("bw-stats");
+  var arr=Array.isArray(state.blockedWords)?state.blockedWords:[];
+  stats.textContent="共 "+arr.length+" 个拦截词";
+  if(!arr.length){cloud.innerHTML='<div class="bw-empty">暂无拦截词，添加后会拦截含该词的帖子和评论</div>';return}
+  // 按长度排序，长的在前（优先匹配更具体的词）
+  var sorted=arr.slice().sort(function(a,b){return b.length-a.length});
+  cloud.innerHTML="";
+  sorted.forEach(function(w){
+    var chip=document.createElement("span");
+    chip.className="bw-chip";
+    chip.innerHTML=escHtml(w)+'<button class="bw-x" data-bwdel="'+escHtml(w)+'" title="删除">×</button>';
+    cloud.appendChild(chip);
+  });
+}
+function addBlockedWords(){
+  var inp=$("bw-input");
+  var raw=String(inp.value||"").trim();
+  if(!raw){setStatus(false,"请输入要拦截的词");return}
+  // 用空格、逗号、换行、分号分隔
+  var words=raw.split(/[\s,，;；、]+/).map(function(s){return s.trim()}).filter(function(s){return s});
+  if(!words.length){setStatus(false,"未识别到有效词汇");return}
+  apiPost("/api/blocked-words",{words:words}).then(function(d){
+    if(d&&d.ok){
+      state.blockedWords=d.words||[];
+      renderBlockedWords();
+      inp.value="";
+      setStatus(true,"已添加 "+(d.added||0)+" 个拦截词（重复的已跳过）");
+    }else{setStatus(false,(d&&d.error)||"添加失败")}
+  }).catch(function(){setStatus(false,"网络错误")});
+}
+function deleteBlockedWord(w){
+  apiPost("/api/blocked-words/delete",{word:w}).then(function(d){
+    if(d&&d.ok){
+      state.blockedWords=d.words||[];
+      renderBlockedWords();
+      setStatus(true,"已删除拦截词");
+    }else{setStatus(false,(d&&d.error)||"删除失败")}
+  }).catch(function(){setStatus(false,"网络错误")});
+}
+function clearAllBlockedWords(){
+  var arr=Array.isArray(state.blockedWords)?state.blockedWords:[];
+  if(!arr.length){setStatus(false,"已经是空的");return}
+  if(!confirm("确定清空全部 "+arr.length+" 个拦截词吗？清空后论坛将不再拦截任何词汇。"))return;
+  apiPost("/api/blocked-words/replace",{words:[]}).then(function(d){
+    if(d&&d.ok){
+      state.blockedWords=d.words||[];
+      renderBlockedWords();
+      setStatus(true,"已清空全部拦截词");
+    }else{setStatus(false,(d&&d.error)||"清空失败")}
+  }).catch(function(){setStatus(false,"网络错误")});
+}
+var syncTimer=null;
+function scheduleSync(){clearTimeout(syncTimer);syncTimer=setTimeout(pushSync,300)}
+function updateShop(){state.shopName=$("in-shopname").value;state.tagline=$("in-tagline").value;scheduleSync()}
+function addPriceRow(){state.prices.push({item:"新项目",amount:"¥0"});renderPrices();scheduleSync()}
+function deletePriceRow(i){state.prices.splice(i,1);renderPrices();scheduleSync()}
+function addQueue(m,n){n=String((n||"").trim());if(!n)return;if(isScanNum(n)){setStatus(false,"C 开头为扫码取号专用前缀，请手动输入其他号码");return}apiPost("/api/enqueue",{machine:m,number:n}).then(function(d){if(d&&d.ok){if(!state.queues[m])state.queues[m]=[];if(state.queues[m].indexOf(n)<0){state.queues[m].push(n);if(!state.enqueuedAt[m])state.enqueuedAt[m]={};state.enqueuedAt[m][n]=Date.now()}renderQueue(m);setStatus(true,"已加入："+n)}else{setStatus(false,(d&&d.error)||"加入失败")}}).catch(function(){})}
+function deleteQueue(m,i){var num=state.queues[m]&&state.queues[m][i];apiPost("/api/remove",{machine:m,index:i}).then(function(d){if(d&&d.ok){if(num){var idx=state.queues[m].indexOf(num);if(idx>=0){state.queues[m].splice(idx,1);if(state.enqueuedAt[m]&&state.enqueuedAt[m][num])delete state.enqueuedAt[m][num]}}renderQueue(m);setStatus(true,"已删除")}else{setStatus(false,(d&&d.error)||"删除失败")}}).catch(function(){})}
+function moveUp(m,i){if(i<=0)return;var a=state.queues[m];var t=a[i-1];a[i-1]=a[i];a[i]=t;renderQueue(m);scheduleSync()}
+function callNumber(m,n){apiPost("/api/call",{machine:m,number:n}).then(function(){state.current[m]=n;var qi=state.queues[m]?state.queues[m].indexOf(n):-1;if(qi>=0){state.queues[m].splice(qi,1);if(state.enqueuedAt[m]&&state.enqueuedAt[m][n])delete state.enqueuedAt[m][n]}renderQueue(m);setStatus(true,"已叫号："+n)}).catch(function(){})}
+function callNext(m){var a=state.queues[m]||[];if(a.length===0){if(state.current[m]){apiPost("/api/call",{machine:m,number:null}).then(function(){state.current[m]=null;renderQueue(m);scheduleSync()}).catch(function(){})}return}var n=a[0];callNumber(m,n)}
+function recall(m){var c=state.current[m];if(!c){setStatus(false,"当前无叫号，无法重叫");return}apiPost("/api/call",{machine:m,number:c}).then(function(){setStatus(true,"已重叫："+c)}).catch(function(){})}
+function clearCurrent(m){apiPost("/api/call",{machine:m,number:null}).then(function(){state.current[m]=null;renderQueue(m);scheduleSync();setStatus(true,"已清空当前")}).catch(function(){})}
+function clearQueue(m){state.queues[m]=[];if(state.enqueuedAt[m])state.enqueuedAt[m]={};renderQueue(m);scheduleSync();setStatus(true,"已清空队列")}
+// 机台操作
+function toggleMachineStatus(m){var cur=statusOf(m),next=cur==="ok"?"repair":"ok";apiPost("/api/machine-status",{machine:m,status:next}).then(function(d){if(d&&d.ok){state.machines=d.machines;state.machineStatus=d.machineStatus;renderMachineStatus();renderQueues();setStatus(true,labelOf(m)+(next==="repair"?" 已设为维护中":" 已恢复可用"))}}).catch(function(){})}
+function renameMachine(m){var cur=labelOf(m);var nl=prompt("输入新的机台名称：",cur);if(nl==null)return;nl=nl.trim();if(!nl){setStatus(false,"名称不能为空");return}apiPost("/api/machine-rename",{id:m,label:nl}).then(function(d){if(d&&d.ok){state.machines=d.machines;if(!state.machineLabels)state.machineLabels={};state.machineLabels[m]=nl;renderMachineStatus();renderQueues();ensureMachineLabels();setStatus(true,"已重命名："+nl)}}).catch(function(){})}
+function removeMachine(m){if(!confirm("确定删除机台「"+labelOf(m)+"」吗？\n该机台的所有排队数据将被清空。"))return;apiPost("/api/machine-remove",{id:m}).then(function(d){if(d&&d.ok){state.machines=d.machines;renderMachineStatus();renderQueues();ensureMachineLabels();setStatus(true,"已删除机台")}}).catch(function(){})}
+function addMachine(){var inp=$("in-machine-label");var label=String(inp.value||"").trim()||"新机台";apiPost("/api/machine-add",{label:label}).then(function(d){if(d&&d.ok){state.machines=d.machines;renderMachineStatus();renderQueues();ensureMachineLabels();inp.value="";setStatus(true,"已添加机台："+label)}}).catch(function(){})}
+// 会员操作
+function addMember(){
+  var ph=$("in-member-phone"),nm=$("in-member-name");
+  var phone=String(ph.value||"").trim(),name=String(nm.value||"").trim();
+  if(!phone){setStatus(false,"请输入手机号");return}
+  if(!/^\d{11}$/.test(phone)){setStatus(false,"请输入 11 位手机号");return}
+  apiPost("/api/member-add",{phone:phone,name:name}).then(function(d){
+    if(d&&d.ok){state.members=d.members||[];renderMembers();ph.value="";nm.value="";setStatus(true,"已添加会员："+phone+(name?"（"+name+"）":""))}
+    else{setStatus(false,(d&&d.error)||"添加失败")}
+  }).catch(function(){});
+}
+function removeMember(i){var mb=(state.members||[])[i];if(!mb)return;var phone=mb.phone;apiPost("/api/member-remove",{phone:phone}).then(function(d){if(d&&d.ok){state.members=d.members||[];renderMembers();setStatus(true,"已删除会员："+phone)}}).catch(function(){})}
+function updateMemberName(phone,name){apiPost("/api/member-update",{phone:phone,name:name}).then(function(d){if(d&&d.ok){state.members=d.members||[];renderMembers();setStatus(true,"已更新名称")}}).catch(function(){})}
+// 事件绑定
+["in-shopname","in-tagline"].forEach(function(id){$(id).addEventListener("input",function(){clearTimeout(syncTimer);syncTimer=setTimeout(updateShop,300)})});
+$("price-body").addEventListener("input",function(e){var t=e.target;if(!t.dataset||t.dataset.pi==null)return;state.prices[parseInt(t.dataset.pi,10)][t.dataset.pf]=t.value;scheduleSync()});
+$("price-body").addEventListener("click",function(e){var b=e.target.closest("[data-pdel]");if(!b)return;deletePriceRow(parseInt(b.dataset.pdel,10))});
+$("btn-price-add").addEventListener("click",addPriceRow);
+$("btn-machine-add").addEventListener("click",addMachine);
+$("in-machine-label").addEventListener("keydown",function(e){if(e.key==="Enter")addMachine()});
+$("btn-member-add").addEventListener("click",addMember);
+$("in-member-phone").addEventListener("keydown",function(e){if(e.key==="Enter")addMember()});
+$("in-member-name").addEventListener("keydown",function(e){if(e.key==="Enter")addMember()});
+// 机台状态/重命名/删除（事件委托）
+$("machine-status-list").addEventListener("click",function(e){
+  var t=e.target.closest("[data-mstoggle],[data-mrename],[data-mremove]");
+  if(!t)return;
+  if(t.dataset.mstoggle!=null)toggleMachineStatus(t.dataset.mstoggle);
+  else if(t.dataset.mrename!=null)renameMachine(t.dataset.mrename);
+  else if(t.dataset.mremove!=null)removeMachine(t.dataset.mremove);
+});
+// 队列操作（事件委托）
+document.body.addEventListener("click",function(e){
+  var el=e.target.closest("[data-act],[data-qcall],[data-qdel],[data-qup]");
+  if(!el)return;
+  if(el.dataset.qcall!=null){var m=el.dataset.machine,i=parseInt(el.dataset.qcall,10),n=state.queues[m][i];callNumber(m,n);return}
+  if(el.dataset.qdel!=null){deleteQueue(el.dataset.machine,parseInt(el.dataset.qdel,10));return}
+  if(el.dataset.qup!=null){moveUp(el.dataset.machine,parseInt(el.dataset.qup,10));return}
+  var a=el.dataset.act,m2=el.dataset.machine;
+  if(a==="next")callNext(m2);
+  else if(a==="add"){var inp=$("in-add-"+m2);addQueue(m2,inp.value);inp.value=""}
+  else if(a==="recall")recall(m2);
+  else if(a==="clear-cur")clearCurrent(m2);
+  else if(a==="clear-q")clearQueue(m2);
+});
+// 会员列表：删除 + 名称编辑（blur 不冒泡，用 capture）
+$("member-list").addEventListener("click",function(e){var b=e.target.closest("[data-mdel]");if(!b)return;removeMember(parseInt(b.dataset.mdel,10))});
+$("member-list").addEventListener("blur",function(e){
+  var el=e.target;
+  if(el&&el.classList&&el.classList.contains("m-name")){
+    var phone=el.dataset.mphone;
+    var raw=el.textContent.replace(/^名称：/,"").trim();
+    updateMemberName(phone,raw);
+  }
+},true);
+$("member-list").addEventListener("keydown",function(e){
+  if(e.target.classList&&e.target.classList.contains("m-name")&&e.key==="Enter"){e.preventDefault();e.target.blur()}
+});
+// 公告管理事件
+$("btn-ann-add").addEventListener("click",submitAnnouncement);
+$("btn-ann-cancel").addEventListener("click",cancelAnnEdit);
+$("ann-list").addEventListener("click",function(e){
+  var ed=e.target.closest("[data-annedit]"),dl=e.target.closest("[data-anndel]");
+  if(ed)editAnnouncement(ed.dataset.annedit);
+  else if(dl)deleteAnnouncement(dl.dataset.anndel);
+});
+// 拦截词事件
+$("btn-bw-add").addEventListener("click",addBlockedWords);
+$("bw-input").addEventListener("keydown",function(e){if(e.key==="Enter")addBlockedWords()});
+$("btn-bw-clear-all").addEventListener("click",clearAllBlockedWords);
+$("bw-cloud").addEventListener("click",function(e){
+  var del=e.target.closest("[data-bwdel]");
+  if(del)deleteBlockedWord(del.dataset.bwdel);
+});
+$("btn-sync").addEventListener("click",function(){pushSync()});
+$("btn-reset").addEventListener("click",function(){if(!confirm("确定要重置全部数据吗？（含扫码计数、等待历史、机台、会员）"))return;apiPost("/api/reset",{}).then(function(){state=defaultState();renderAll();setStatus(true,"已重置")})});
+$("btn-copy-display").addEventListener("click",function(){var u=$("display-url").textContent;if(!u||u==="检测中…")return;copyText(u);setStatus(true,"已复制大屏地址")});
+$("btn-copy-take").addEventListener("click",function(){var u=$("take-url").textContent;if(!u||u==="检测中…")return;copyText(u);setStatus(true,"已复制取号页地址")});
+function copyText(t){try{navigator.clipboard.writeText(t)}catch(e){var i=document.createElement("input");i.value=t;document.body.appendChild(i);i.select();try{document.execCommand("copy")}catch(err){}document.body.removeChild(i)}}
+function setStatus(ok,text){var s=$("status");s.className="status-line "+(ok?"ok":"bad");$("status-text").textContent=text}
+// 背景图
+var bgBrightnessTimer=null;
+function uploadBgFile(file){
+  if(!file){return}
+  var tip=$("bg-tip");
+  if(file.size>10*1024*1024){tip.textContent="图片过大（超过 10MB），请压缩后重试";return}
+  tip.textContent="上传中…";
+  var fd=new FormData();fd.append("file",file);
+  fetch("/api/upload-bg",{method:"POST",body:fd}).then(function(r){return r.json()}).then(function(d){
+    if(d&&d.ok){state.bgImage=d.bgImage;renderBg();tip.textContent="上传成功";setStatus(true,"背景图已更新")}
+    else{tip.textContent="上传失败："+((d&&d.error)||"未知错误");setStatus(false,"背景图上传失败")}
+  }).catch(function(e){tip.textContent="上传失败："+e.message;setStatus(false,"背景图上传失败")});
+}
+function pushBgBrightness(b){apiPost("/api/bg-settings",{brightness:b}).then(function(){setStatus(true,"亮度已同步："+b)}).catch(function(){})}
+$("bg-file-input").addEventListener("change",function(e){var f=e.target.files&&e.target.files[0];if(f){uploadBgFile(f);e.target.value=""}});
+$("bg-brightness").addEventListener("input",function(e){var b=parseInt(e.target.value,10);$("bg-brightness-val").textContent=b;clearTimeout(bgBrightnessTimer);bgBrightnessTimer=setTimeout(function(){pushBgBrightness(b)},250)});
+$("btn-bg-clear").addEventListener("click",function(){
+  if(!state.bgImage){setStatus(false,"当前未设置背景图");return}
+  if(!confirm("确定清除背景图吗？"))return;
+  apiPost("/api/bg-clear",{}).then(function(d){if(d&&d.ok){state.bgImage=null;renderBg();setStatus(true,"已清除背景图")}}).catch(function(){});
+});
+// SSE
+var evtSource=null;
+// 密码锁
+function tryUnlock(){
+  var pwd=$("lock-input").value.trim();
+  if(!pwd){$("lock-tip").textContent="请输入密码";return}
+  apiPost("/api/login",{password:pwd}).then(function(d){
+    if(d&&d.ok){sessionStorage.setItem("console_unlocked","1");$("lock-overlay").classList.add("hide");$("lock-input").value="";$("lock-tip").textContent=""}
+    else{$("lock-tip").textContent="密码错误"}
+  }).catch(function(){$("lock-tip").textContent="网络错误"})
+}
+if(sessionStorage.getItem("console_unlocked")==="1"){$("lock-overlay").classList.add("hide")}
+$("lock-btn").addEventListener("click",tryUnlock);
+$("lock-input").addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();tryUnlock()}});
+// 修改密码
+$("btn-pwd-change").addEventListener("click",function(){
+  var o=$("pwd-old").value,n=$("pwd-new").value;
+  if(!o||!n){setStatus(false,"请填写原密码和新密码");return}
+  apiPost("/api/password",{old:o,new:n}).then(function(d){if(d&&d.ok){$("pwd-old").value="";$("pwd-new").value="";setStatus(true,"密码已修改")}else{setStatus(false,(d&&d.error)||"修改失败")}}).catch(function(){setStatus(false,"网络错误")})
+});
+// 系统设置渲染
+function renderSettings(){
+  var ac=state.autoCall||{enabled:false,duration:8};
+  $("set-autocall").checked=!!ac.enabled;
+  $("set-autocall-dur").value=ac.duration||8;
+  $("set-closing").value=state.closingTime||"";
+}
+$("set-autocall").addEventListener("change",function(){pushSettings()});
+$("set-autocall-dur").addEventListener("change",function(){pushSettings()});
+$("set-closing").addEventListener("change",function(){pushSettings()});
+$("btn-closing-clear").addEventListener("click",function(){$("set-closing").value="";pushSettings()});
+function pushSettings(){
+  apiPost("/api/settings",{
+    autoCall:{enabled:$("set-autocall").checked,duration:parseInt($("set-autocall-dur").value,10)||8},
+    closingTime:$("set-closing").value
+  }).then(function(d){if(d&&d.ok){setStatus(true,"设置已保存")}}).catch(function(){setStatus(false,"保存失败")})
+}
+function connectSSE(){try{if(evtSource)evtSource.close()}catch(e){}evtSource=new EventSource("/api/events");evtSource.onopen=function(){setStatus(true,"已连接")};evtSource.onmessage=function(e){var d={};try{d=JSON.parse(e.data)}catch(err){return}if(d.type==="sync"){state=d.state;renderAll()}};evtSource.onerror=function(){setStatus(false,"连接断开，5 秒后重连…");try{evtSource.close()}catch(err){}setTimeout(connectSSE,5000)}}
+fetch("/api/state").then(function(r){return r.json()}).then(function(s){if(s&&s.prices){state=s;renderAll()}connectSSE()}).catch(function(){setStatus(false,"无法连接服务，请确认 server.js 正在运行");connectSSE()});
+(function(){var h=location.hostname||"localhost",p=location.port||"8787",proto=location.protocol||"http:";$("display-url").textContent=proto+"//"+h+":"+p+"/display.html";$("take-url").textContent=proto+"//"+h+":"+p+"/take.html"})();
+renderAll();
+})();
+</script>
+</body>
+</html>

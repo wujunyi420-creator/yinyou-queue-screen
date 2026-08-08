@@ -1,0 +1,28 @@
+# Render Blueprint — 一键部署配置
+# 文档: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: yinyou-forum
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /api/state
+    envVars:
+      - key: NODE_VERSION
+        value: 18
+      - key: AI_MOD_URL
+        sync: false
+      - key: AI_MOD_KEY
+        sync: false
+      - key: AI_MOD_MODEL
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: yinyou-db
+          property: connectionString
+
+databases:
+  - name: yinyou-db
+    plan: free
+    databaseName: yinyou

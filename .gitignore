@@ -1,0 +1,13 @@
+node_modules/
+state.json
+uploads/
+.env
+排队大屏*.zip
+排队大屏/
+排队大屏-合作商版/
+排队大屏-完整版/
+_build/
+_build*.js
+forum_backup_*.html
+Miniconda3-installer.exe
+*.log

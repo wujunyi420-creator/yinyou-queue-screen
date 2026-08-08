@@ -1,0 +1,161 @@
+=====================================
+  音游窝论坛 · Cloudflare Pages 部署指南
+=====================================
+
+【准备】cf-deploy 文件夹内包含全部部署文件
+  - forum.html          前端页面
+  - functions/api/      后端 API（Cloudflare Pages Functions）
+  - schema.sql          数据库建表脚本
+  - wrangler.toml       Cloudflare 配置
+  - package.json        依赖声明
+
+=====================================
+  步骤 1：注册 Cloudflare 账号
+=====================================
+  打开 https://dash.cloudflare.com/sign-up
+  用邮箱注册（免费，不用绑卡）
+
+=====================================
+  步骤 2：创建 D1 数据库
+=====================================
+  1. 登录后进入 Dashboard
+  2. 左侧菜单 → Workers & Pages → D1
+  3. 点 "Create database"
+  4. 数据库名填：yinyou-forum-db
+  5. 点 Create，创建完成
+
+=====================================
+  步骤 3：执行建表脚本
+=====================================
+  1. 在刚创建的数据库页面，点 "Console" 标签
+  2. 打开本地的 schema.sql 文件，复制全部内容
+  3. 粘贴到 Console 输入框
+  4. 点 Execute 执行
+  5. 看到 "Query executed successfully" 即成功
+
+=====================================
+  步骤 4：获取数据库 ID
+=====================================
+  1. 在数据库页面，找到 "Database ID"
+  2. 复制这个 ID（一长串字符）
+  3. 打开 wrangler.toml，把 database_id 的值替换成你的 ID
+     database_id = "替换为你的D1数据库ID"  →  database_id = "xxxx-xxxx-xxxx"
+
+=====================================
+  步骤 5：推送到 GitHub
+=====================================
+  方式 A（推荐，用 git）：
+    1. 在 GitHub 创建一个新仓库（比如 yinyou-forum）
+    2. 把 cf-deploy 文件夹内的全部文件上传到仓库根目录
+    3. 确保仓库结构是：
+       /forum.html
+       /wrangler.toml
+       /package.json
+       /schema.sql
+       /functions/api/...
+
+  方式 B（直接网页上传）：
+    1. GitHub 新建仓库
+    2. 点 "uploading an existing file"
+    3. 把 cf-deploy 内的文件拖进去（注意 functions 文件夹结构要保持）
+
+=====================================
+  步骤 6：创建 Cloudflare Pages 项目
+=====================================
+  1. Dashboard → Workers & Pages → Create → Pages
+  2. 选 "Connect to Git"
+  3. 授权并选择你的 GitHub 仓库
+  4. 填写配置：
+     - Project name: yinyou-forum
+     - Production branch: main
+     - Framework preset: 无
+     - Build command: 留空
+     - Build output directory: /（根目录）
+  5. 展开 "Environment variables"，添加 3 个变量：
+
+     变量 1：
+       Name:  AI_MOD_URL
+       Value: （你的 AI 审核 API 地址，OpenAI 兼容格式）
+
+     变量 2：
+       Name:  AI_MOD_KEY
+       Value: （你的 API Key）
+
+     变量 3：
+       Name:  AI_MOD_MODEL
+       Value: （你的模型名）
+
+  6. 点 "Save and Deploy"
+  7. 等待 1-2 分钟，部署完成
+
+=====================================
+  步骤 7：绑定 D1 数据库
+=====================================
+  1. 部署完成后，进入 Pages 项目页面
+  2. Settings → Functions → D1 database bindings
+  3. 点 "Add binding"
+  4. 填写：
+     - Variable name: DB
+     - D1 database: 选择 yinyou-forum-db
+  5. 点 Save
+  6. 触发一次重新部署（Deployments → 任一部署 → Retry deployment）
+
+=====================================
+  步骤 8：访问你的论坛
+=====================================
+  部署成功后，Cloudflare 会给你一个地址：
+    https://yinyou-forum.pages.dev
+
+  打开就是论坛首页！
+  （首次访问可能要等 10-30 秒冷启动）
+
+=====================================
+  常见问题
+=====================================
+
+  Q: 发帖后没有立即出现？
+  A: 轮询有 3 秒延迟，稍等一下会自动刷新。
+
+  Q: AI 审核不生效？
+  A: 检查环境变量 AI_MOD_URL / AI_MOD_KEY / AI_MOD_MODEL 是否填对。
+     在 Cloudflare Pages → Settings → Environment variables 确认。
+
+  Q: 图片上传失败？
+  A: D1 单行有大小限制，图片不能超过 5MB。
+     建议发帖时压缩图片或用小图。
+
+  Q: 想修改拦截词？
+  A: 在 D1 Console 执行：
+     UPDATE settings SET value='["词1","词2"]' WHERE key='blockedWords';
+
+  Q: 想修改店名？
+  A: 在 D1 Console 执行：
+     UPDATE settings SET value='你的店名' WHERE key='shopName';
+
+  Q: 想发公告？
+  A: 在 D1 Console 执行：
+     UPDATE settings SET value='[{"title":"标题","content":"内容"}]' WHERE key='announcements';
+
+=====================================
+  本地测试（可选）
+=====================================
+  安装 Node.js 后，在 cf-deploy 目录执行：
+    npm install
+    npm run dev
+  打开 http://localhost:8787/forum.html 测试
+  （本地模式需要额外配置 .dev.vars 文件放环境变量）
+
+=====================================
+  文件说明
+=====================================
+  forum.html                前端页面（论坛 UI）
+  functions/_utils.js       共享工具函数（AI审核、拦截词等）
+  functions/api/state.js    GET 店名等基础信息
+  functions/api/posts/      帖子 CRUD + 点赞 + 评论 + 浏览
+  functions/api/img/        图片读取
+  functions/api/upload-post-image.js   图片上传
+  functions/api/announcements.js       公告
+  functions/api/blocked-words.js       拦截词管理
+  functions/api/check-member.js        会员查询（无会员系统，返回游客）
+  schema.sql                数据库建表脚本
+  wrangler.toml             Cloudflare 配置
