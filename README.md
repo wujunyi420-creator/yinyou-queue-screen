@@ -74,8 +74,9 @@
 
 | 版本 | 文件 | 说明 |
 |:----:|------|------|
-| 🎁 完整版 | `queue-screen-full.zip` | 含全部功能与音频文件，开箱即用 |
-| 🏪 合作商版 | `queue-screen-partner.zip` | 精简配置版，适合街机店合作商 |
+| 🪟 完整版 (Windows) | `queue-screen-full.zip` | 含全部功能与音频文件，开箱即用 |
+| 🏪 合作商版 (Windows) | `queue-screen-partner.zip` | 精简配置版，适合街机店合作商 |
+| 🐧🍎 Linux/macOS 版 | `queue-screen-linux-mac.zip` | 跨平台版，含 start.sh 启动脚本 |
 
 ---
 
@@ -103,9 +104,29 @@ npm start                          # 启动服务
 > 💡 **局域网访问**：双击 `开放端口.bat`，其他设备用本机 IP 访问即可
 
 <details>
-<summary>📁 Windows 一键启动（点击展开）</summary>
+<summary>🪟 Windows 一键启动（点击展开）</summary>
 
 直接双击 `启动.bat` 即可，无需命令行操作。
+
+</details>
+
+<details>
+<summary>🐧🍎 Linux/macOS 启动（点击展开）</summary>
+
+```bash
+# 1. 下载 queue-screen-linux-mac.zip 并解压
+# 2. 安装 Node.js 14+
+#    macOS:    brew install node
+#    Ubuntu:   sudo apt install nodejs
+# 3. 进入解压目录，赋权并启动
+chmod +x start.sh
+./start.sh
+```
+
+首次需放行防火墙端口：
+- Ubuntu: `sudo ufw allow 8787/tcp`
+- CentOS: `sudo firewall-cmd --permanent --add-port=8787/tcp && sudo firewall-cmd --reload`
+- macOS: 默认不拦截，通常无需配置
 
 </details>
 
