@@ -1,5 +1,5 @@
 ═══════════════════════════════════════════
-      排队大屏 · 使用指南 (Linux / macOS)
+        排队大屏 · 使用指南 (Linux)
 ═══════════════════════════════════════════
 
 【这是什么】
@@ -17,44 +17,39 @@
 ───────────────────────────────────────────
 
 1. 解压到一个文件夹，应有以下内容：
-   · start.sh           启动脚本
-   · server.js          服务程序
-   · console.html       控制台页面
-   · display.html       大屏页面
-   · take.html          取号页（顾客手机用）
-   · forum.html         社区论坛
-   · bg.png             背景图
-   · state.json         数据文件
-   · audio/             语音文件目录
-   · uploads/           上传文件目录
-   · 使用指南.txt
+   · start-linux.sh       启动脚本（含 TTS 检测）
+   · server.js            服务程序
+   · console.html         控制台页面
+   · display.html         大屏页面
+   · take.html            取号页（顾客手机用）
+   · forum.html           社区论坛
+   · bg.png               背景图
+   · 使用指南-Linux.txt
 
 2. 安装 Node.js（仅控制台机器需要）
-   · macOS (推荐 Homebrew):
-       brew install node
-     如未安装 Homebrew:
-       /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
    · Ubuntu/Debian:
        sudo apt update && sudo apt install -y nodejs
-   · CentOS/RHEL/Fedora:
+   · CentOS/RHEL:
        sudo yum install -y nodejs
-     或 Fedora:
+   · Fedora:
        sudo dnf install -y nodejs
-   · 其他 Linux 或官网下载:
-       https://nodejs.org/zh-cn/download/
+   · Arch Linux:
+       sudo pacman -S nodejs
+   · openSUSE:
+       sudo zypper install -y nodejs
+   · 或官网下载: https://nodejs.org/zh-cn/download/
    · 大屏和手机不需要装任何东西
 
 3. 给启动脚本加执行权限（只需做一次）
    打开终端，进入解压目录，运行：
-       chmod +x start.sh
+       chmod +x start-linux.sh
 
-4. 放行防火墙端口 8787（按需）
+4. 放行防火墙端口 8787
    · Ubuntu (ufw):
        sudo ufw allow 8787/tcp
-   · CentOS/RHEL (firewalld):
+   · CentOS/RHEL/Fedora (firewalld):
        sudo firewall-cmd --permanent --add-port=8787/tcp
        sudo firewall-cmd --reload
-   · macOS: 默认不拦截入站，通常无需配置
    · 云服务器: 还需在云控制台安全组放行 8787
 
 
@@ -64,7 +59,7 @@
 
 步骤 1：启动服务
   · 打开终端，进入解压目录
-  · 运行:  ./start.sh
+  · 运行:  ./start-linux.sh
   · 终端显示服务地址，并自动打开默认浏览器到控制台
   · 终端不要关，关了服务就停
   · 记下终端里的地址，例如：
@@ -123,28 +118,106 @@
 · 叫的号越多，预估越准
 
 
-───────────────────────────────────────────
-六、语音播报
-───────────────────────────────────────────
+═══════════════════════════════════════════
+六、语音播报 (Linux 专属 · 重点章节)
+═══════════════════════════════════════════
 
+【为什么 Linux 语音需要单独配置？】
 · 语音只在大屏那台机器播报
 · 首次打开大屏必须点一下屏幕解锁
 · 叫号时播："请 X 号，到 XX 机台"
 
-【推荐用 Chrome / Edge 浏览器打开大屏】
-  Chromium 内核浏览器自带在线 Neural 语音，
-  声音更自然可爱，接近迪拉熊效果。
-  · 用 Chrome / Edge 打开大屏地址即可
-  · 需要联网（在线语音从云端获取）
-  · 系统会自动选最合适的语音
+与 Windows/Mac 不同，Linux 上的浏览器（Chrome/Edge/Firefox）
+普遍不带在线 Neural 语音，Web Speech API 会回退到系统 TTS 引擎。
+=> 不装系统语音包，大屏叫号很可能完全没声音！
 
-没声音排查：
+
+【方案 A：espeak-ng —— 轻量兜底，推荐先装】
+
+Ubuntu/Debian:
+    sudo apt install -y espeak-ng espeak-ng-data
+CentOS/RHEL/Fedora:
+    sudo dnf install -y espeak-ng
+Arch Linux:
+    sudo pacman -S espeak-ng
+openSUSE:
+    sudo zypper install -y espeak-ng
+
+测试中文语音：
+    espeak-ng -v zh "请 001 号到舞萌机台"
+
+特点：
+· 安装简单，几 MB 大小
+· 所有发行版都有包
+· 缺点：声音偏机械生硬，不像迪拉熊
+
+
+【方案 B：Piper —— 神经网络语音，质量好】
+
+Piper 是高质量本地神经网络 TTS，适合追求音质的店铺。
+
+1) 下载 Piper 二进制:
+   https://github.com/rhasspy/piper/releases
+   选择 piper_linux_x86_64.tar.gz
+
+2) 解压并下载中文模型:
+   # 假设解压到 ~/piper
+   cd ~/piper
+   # 下载中文女声模型（约 60MB）
+   wget https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/zh/zh_CN/huayan/medium/zh_CN-huayan-medium.onnx
+   wget https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/zh/zh_CN/huayan/medium/zh_CN-huayan-medium.onnx.json
+
+3) 测试:
+   ./piper --model zh_CN-huayan-medium.onnx --output_file /tmp/test.wav < <<"请 001 号到舞萌机台"
+   aplay /tmp/test.wav
+
+4) 让浏览器调用 Piper:
+   需通过 speech-dispatcher 桥接，配置较复杂。
+   详见: https://github.com/rhasspy/piper
+
+
+【方案 C：speech-dispatcher —— 统一调度】
+
+若系统已装多个 TTS 引擎，推荐用 speech-dispatcher 统一管理:
+
+    sudo apt install -y speech-dispatcher
+    spd-conf                    # 交互配置
+    spd-say -l zh "测试中文"
+
+浏览器（Firefox）有时会自动识别 speech-dispatcher。
+
+
+【方案 D：最简单 —— 用别的设备当大屏机】
+
+如果不折腾 Linux TTS，推荐：
+· 把 Linux 机器只用来跑 server.js（服务端）
+· 大屏用 Windows 平板 / Mac / Android 平板浏览器打开
+  http://Linux机器IP:8787/display.html
+· 这样大屏语音由 Windows/Mac/Android 系统负责，质量天然更好
+
+
+【start-linux.sh 的 TTS 检测功能】
+
+启动脚本内置 TTS 检测，三种用法：
+
+  # 普通启动（仅提示是否缺 TTS）
+  ./start-linux.sh
+
+  # 首次启动时自动引导安装 espeak-ng
+  INSTALL_TTS=1 ./start-linux.sh
+
+  # 已装好或不在意语音，跳过检测
+  SKIP_TTS_CHECK=1 ./start-linux.sh
+
+
+没声音排查清单：
   1. 确认大屏页面已点过解锁
-  2. 推荐用 Chrome / Edge 浏览器
-  3. macOS 系统语音：系统设置 → 辅助功能 → 语音 →
-     添加"中文"系统语音
-  4. Linux 可安装 espeak/festival 用于本地 TTS
-  5. 检查音箱和音量
+  2. 确认已安装 espeak-ng 且有中文语音数据
+     espeak-ng --voices=zh     # 应输出至少一行
+  3. 浏览器静音？地址栏 chrome://settings/content/sound 检查
+  4. 系统音量 / 音频输出设备是否正常
+     speaker-test -t sine -f 440    # 测试是否能出声
+  5. 实在搞不定 → 改用方案 D（其他设备当大屏）
 
 
 ───────────────────────────────────────────
@@ -153,16 +226,16 @@
 
 Q: 大屏/取号页访问不到？
 A: 三步排查：
-   1. 确认 start.sh 终端还开着
+   1. 确认 start-linux.sh 终端还开着
    2. 确认防火墙已放行 8787 端口
+      sudo ufw status          # Ubuntu
+      sudo firewall-cmd --list-ports   # CentOS
    3. 确认两台机器连同一个 WiFi 且同网段
-      （查 IP：
-         macOS:   终端输入 ifconfig | grep inet
-         Linux:   终端输入 ip addr 或 hostname -I
+      （查 IP: hostname -I 或 ip addr
        忽略 172.x.x.x / docker 虚拟网卡）
 
 Q: 换了 WiFi 后 IP 变了？
-A: 以 start.sh 终端里显示的实际 IP 为准。
+A: 以 start-linux.sh 终端里显示的实际 IP 为准。
    大屏二维码会自动更新成新地址。
 
 Q: 关机后数据丢吗？
@@ -171,17 +244,35 @@ A: 不丢。存在 state.json 里，重启自动恢复。
 Q: 扫码号和手动号会冲突吗？
 A: 不会。扫码号固定 C 前缀，手动加号时输入 C 开头会被拒绝。
 
-Q: macOS 提示"无法验证开发者"？
-A: 系统设置 → 隐私与安全性 → 点击"仍要打开"。
-   或在终端运行: xattr -d com.apple.quarantine start.sh
+Q: 大屏没声音？
+A: 见第六章「没声音排查清单」。Linux 必须装 TTS 才能出声。
 
 Q: 后台运行（关掉终端不停服务）？
 A: 使用 nohup 或 screen/tmux:
      nohup node server.js > server.log 2>&1 &
    或:
      screen -S queue
-     ./start.sh
+     ./start-linux.sh
      # 按 Ctrl+A 再按 D 脱离
+
+Q: 开机自启？
+A: 用 systemd 写 service 文件，例如:
+   sudo tee /etc/systemd/system/queue-screen.service <<'EOF'
+   [Unit]
+   Description=Queue Screen Service
+   After=network.target
+
+   [Service]
+   Type=simple
+   User=你的用户名
+   WorkingDirectory=/path/to/queue-screen
+   ExecStart=/usr/bin/node server.js
+   Restart=on-failure
+
+   [Install]
+   WantedBy=multi-user.target
+   EOF
+   sudo systemctl enable --now queue-screen.service
 
 
 ═══════════════════════════════════════════

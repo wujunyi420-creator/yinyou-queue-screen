@@ -76,7 +76,8 @@
 |:----:|------|------|
 | 🪟 完整版 (Windows) | `queue-screen-full.zip` | 含全部功能与音频文件，开箱即用 |
 | 🏪 合作商版 (Windows) | `queue-screen-partner.zip` | 精简配置版，适合街机店合作商 |
-| 🐧🍎 Linux/macOS 版 | `queue-screen-linux-mac.zip` | 跨平台版，含 start.sh 启动脚本 |
+| 🐧 Linux 版 | `queue-screen-linux.zip` | 含 start-linux.sh 启动脚本 + TTS 语音包配置 |
+| 🍎 macOS 版 | `queue-screen-mac.zip` | 含 start-mac.sh 启动脚本，原生中文语音支持 |
 
 ---
 
@@ -111,22 +112,43 @@ npm start                          # 启动服务
 </details>
 
 <details>
-<summary>🐧🍎 Linux/macOS 启动（点击展开）</summary>
+<summary>🐧 Linux 启动（点击展开）</summary>
 
 ```bash
-# 1. 下载 queue-screen-linux-mac.zip 并解压
+# 1. 下载 queue-screen-linux.zip 并解压
 # 2. 安装 Node.js 14+
-#    macOS:    brew install node
 #    Ubuntu:   sudo apt install nodejs
+#    CentOS:   sudo yum install nodejs
 # 3. 进入解压目录，赋权并启动
-chmod +x start.sh
-./start.sh
+chmod +x start-linux.sh
+./start-linux.sh
 ```
 
 首次需放行防火墙端口：
 - Ubuntu: `sudo ufw allow 8787/tcp`
 - CentOS: `sudo firewall-cmd --permanent --add-port=8787/tcp && sudo firewall-cmd --reload`
-- macOS: 默认不拦截，通常无需配置
+
+> 🔊 **Linux 语音叫号需额外配置 TTS**：浏览器不像 Windows/Mac 自带在线语音，
+> 首次启动可用 `INSTALL_TTS=1 ./start-linux.sh` 引导安装 espeak-ng，
+> 详细方案见包内 `使用指南-Linux.txt` 第六章。
+
+</details>
+
+<details>
+<summary>🍎 macOS 启动（点击展开）</summary>
+
+```bash
+# 1. 下载 queue-screen-mac.zip 并解压
+# 2. 安装 Node.js 14+
+#    推荐 Homebrew:  brew install node
+# 3. 进入解压目录，赋权并启动
+chmod +x start-mac.sh
+./start-mac.sh
+```
+
+> 🔊 推荐用 Edge / Chrome 打开大屏，可调用在线 Neural 语音（需联网），
+> 无需本地语音包。用 Safari 需在「系统设置 → 辅助功能 → 语音」中
+> 添加 `Ting-Ting` 中文语音。
 
 </details>
 
