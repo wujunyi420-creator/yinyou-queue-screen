@@ -10,6 +10,16 @@ const https = require("https");
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
+// 本地 .env 加载（零依赖，仅本地模式生效，不上传）
+try {
+  const envPath = path.join(__dirname, ".env");
+  if (fs.existsSync(envPath)) {
+    fs.readFileSync(envPath, "utf8").split(/\r?\n/).forEach(function (line) {
+      var m = line.match(/^\s*([A-Z_][A-Z0-9_]*)\s*=\s*(.*)\s*$/);
+      if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, "");
+    });
+  }
+} catch (e) {}
 const PORT = process.env.PORT || 8787;
 const STATE_FILE = path.join(__dirname, "state.json");
 var SCAN_PREFIX = "C";
@@ -1488,6 +1498,7 @@ server.listen(PORT, "0.0.0.0", function () {
   console.log("  扫码号前缀：" + SCAN_PREFIX + "（如 " + SCAN_PREFIX + "001）");
   console.log("  VIP 阈值：" + VIP_THRESHOLD + " 次");
   console.log("  机台数量：" + (state.machines ? state.machines.length : 0));
+  console.log("  AI 审核：" + (AI_MOD.enabled ? "已启用 → " + AI_MOD.model : "未启用（仅敏感词过滤）"));
   console.log("  按 Ctrl+C 停止服务");
   console.log("========================================");
 });
