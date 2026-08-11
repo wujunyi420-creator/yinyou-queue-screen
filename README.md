@@ -74,7 +74,7 @@
 
 | 版本 | 文件 | 说明 |
 |:----:|------|------|
-| 👾Windows版 | `queue-screen-partner.zip` | Windows版直接开箱即用 |
+| 👾Windows版 | `queue-screen-windows.zip` | Windows版直接开箱即用 |
 | 🐧 Linux 版 | `queue-screen-linux.zip` | 含 start-linux.sh 启动脚本 + TTS 语音包配置 |
 | 🍎 macOS 版 | `queue-screen-mac.zip` | 含 start-mac.sh 启动脚本，原生中文语音支持 |
 
